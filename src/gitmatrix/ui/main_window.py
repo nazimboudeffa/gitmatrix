@@ -15,6 +15,7 @@ from PySide6.QtWidgets import (
     QFileDialog,
     QMessageBox,
     QHBoxLayout,
+    QSizePolicy,
 )
 
 from gitmatrix.core.git_repo import GitMatrixError, GitRepo, FileChange
@@ -24,6 +25,7 @@ from gitmatrix.widgets.file_list import FileListWidget
 from gitmatrix.widgets.diff_viewer import DiffViewer
 from gitmatrix.widgets.branch_panel import BranchPanel
 from gitmatrix.ui.commit_dialog import CommitDialog
+from gitmatrix.ui.about_dialog import AboutDialog
 
 
 class MainWindow(QMainWindow):
@@ -79,6 +81,14 @@ class MainWindow(QMainWindow):
         self._commit_action = act_commit
         toolbar.addSeparator()
         toolbar.addAction("Quitter", self.close)
+
+        # Espace poussant le bouton About vers la droite
+        spacer = QWidget()
+        spacer.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred
+        )
+        toolbar.addWidget(spacer)
+        toolbar.addAction("À propos", self._open_about)
 
         # ------------------------------------------------------------------
         # Status bar
@@ -195,6 +205,9 @@ class MainWindow(QMainWindow):
         except GitMatrixError as exc:
             QMessageBox.critical(self, "Erreur", str(exc))
         self._refresh()
+
+    def _open_about(self) -> None:
+        AboutDialog(self).exec()
 
     def _update_status(self, commit=None) -> None:
         parts = []
