@@ -332,6 +332,39 @@ class GitRepo:
         except Exception as exc:
             raise GitMatrixError(f"Impossible de basculer sur {name} : {exc}")
 
+    def pull(self) -> str:
+        """Récupère et fusionne les changements du remote.
+
+        Si la branche courante n'a pas d'upstream configuré (clone à la main),
+        on retombe sur ``git pull origin <branche>``.
+        """
+        branch = self.active_branch
+        try:
+            result = self._repo.git.pull()
+            return result.strip()
+        except git.exc.GitCommandError as exc:
+            stderr = exc.stderr or ""
+            if branch and "tracking information" in stderr:
+                try:
+                    remote_branch = self._default_remote_branch() or branch
+                    return self._repo.git.pull("origin", remote_branch).strip()
+                except Exception as exc2:
+                    raise GitMatrixError(f"Échec du pull : {exc2}") from None
+            raise GitMatrixError(f"Échec du pull : {exc}") from None
+        except Exception as exc:
+            raise GitMatrixError(f"Échec du pull : {exc}") from None
+
+    def _default_remote_branch(self) -> str | None:
+        """Branche par défaut du remote ``origin`` (ex. main) via ls-remote."""
+        try:
+            ref = self._repo.git.ls_remote("--symref", "origin", "HEAD")
+            for line in ref.splitlines():
+                if line.startswith("ref:"):
+                    return line.split()[1].replace("refs/heads/", "")
+        except Exception:
+            pass
+        return None
+
     def init_or_open(path: str) -> "GitRepo":
         return GitRepo(path)
 

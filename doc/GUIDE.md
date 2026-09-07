@@ -139,6 +139,7 @@ python -m gitmatrix -r chemin\vers\mon\repo
 | ------------- | ----- |
 | Ouvrir…       | Ouvre un dépôt |
 | Actualiser    | Recharge graphe + changements |
+| Pull          | Récupère et fusionne les changements du remote |
 | Stage All     | Indexe tous les changements |
 | Unstage All   | Dé-indexe tout |
 | Commit…       | Ouvre la fenêtre de commit |
@@ -175,9 +176,21 @@ git --help
 
 ### 2.7 Limites actuelles — et la suite
 
-Cette première version couvre : graphe, staging, diff, branches, commit.
-Les **remotes (push/pull/fetch)**, les **fusions/rebase**, le **stash** et les
-**tags** sont à l'étape Phase 1 des plans → voir [`doc/PLAN.md`](PLAN.md).
+Cette première version couvre : graphe, staging, diff, branches, commit, **pull**.
+Les **push/fetch**, les **fusions/rebase**, le **stash** et les **tags** sont à
+l'étape Phase 1 des plans → voir [`doc/PLAN.md`](PLAN.md).
+
+### 2.8 Repos de test
+
+Un dépôt de test est disponible en ligne pour essayer GitMatrix (multi-contributeurs,
+branches, tags, gros historique) :
+
+- Repo : <https://github.com/nazimboudeffa/gitmatrix-tests>
+
+```bash
+git clone https://github.com/nazimboudeffa/gitmatrix-tests.git
+python -m gitmatrix -r gitmatrix-tests
+```
 
 ---
 
