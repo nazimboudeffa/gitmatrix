@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import List, Optional
 
-from PySide6.QtCore import QRectF, Qt, Signal
+from PySide6.QtCore import QPointF, QRectF, Qt, Signal
 from PySide6.QtGui import (
     QColor,
     QFont,
@@ -50,6 +50,8 @@ class CommitGraphWidget(QAbstractScrollArea):
         self._repo: Optional[GitRepo] = None
         self._layout: Optional[GraphLayout] = None
         self._entries: List[GraphNode] = []
+        self._row_index: dict = {}  # hexsha -> index de ligne (rapide au dessin)
+        self._commit_colors: dict = {}  # hexsha -> couleur de SA branche
         self._selected_sha: Optional[str] = None
         self._hovered_sha: Optional[str] = None
         self._colors: dict = {}
@@ -86,24 +88,66 @@ class CommitGraphWidget(QAbstractScrollArea):
     # ------------------------------------------------------------------
     def _reload(self) -> None:
         self._entries = []
+        self._row_index = {}
         if self._repo is None:
             self._update_geometry()
             return
         commits = self._repo.walk_commits()
-        layout = GraphLayout(commits, self._repo)
+        ref_map = self._repo.ref_map_by_commit()
+        layout = GraphLayout(commits, ref_map)
         self._layout = layout
 
-        for commit in commits:
+        for idx, commit in enumerate(commits):
             node = layout.nodes.get(commit.hexsha)
             if node is None:
                 node = GraphNode(commit=commit, column=0)
             self._entries.append(node)
+            self._row_index[commit.hexsha] = idx
+
+        self._assign_colors(layout)
 
         self._colors.clear()
         for i in range(max(1, layout.max_columns)):
             self._colors[i] = QColor(COLOR_PALETTE[i % len(COLOR_PALETTE)])
 
         self._update_geometry()
+
+    def _assign_colors(self, layout: GraphLayout) -> None:
+        """Couleur stable PAR BRANCHE (façon GitKraken).
+
+        Chaque extrémité de branche (commit porteur d'une ref branch/head)
+        reçoit une couleur de la palette dans l'ordre où elle apparaît (le
+        plus récent d'abord), puis cette couleur descend le long de sa lignée
+        (premier parent). Un commit déjà coloré n'est pas recoloré.
+        """
+        if not self._entries:
+            self._commit_colors = {}
+            return
+        palette = [QColor(h) for h in COLOR_PALETTE]
+        commit_by_sha = {e.commit.hexsha: e.commit for e in self._entries}
+        tips = [
+            e
+            for e in self._entries
+            if any(r.kind in ("branch", "head") for r in e.refs)
+        ]
+        colors: dict = {}
+        for i, tip in enumerate(tips):
+            color = palette[i % len(palette)]
+            sha = tip.commit.hexsha
+            while sha in commit_by_sha and sha not in colors:
+                colors[sha] = color
+                parents = commit_by_sha[sha].parents
+                sha = parents[0] if parents else None
+        # filet de sécurité : commit sans branche visible (rare)
+        for e in self._entries:
+            if e.commit.hexsha not in colors:
+                colors[e.commit.hexsha] = palette[e.column % len(palette)]
+        self._commit_colors = colors
+
+    def _color_of(self, entry: GraphNode) -> QColor:
+        return self._commit_colors.get(
+            entry.commit.hexsha, self._colors.get(entry.column, QColor("#61afef"))
+        )
 
     def _update_geometry(self) -> None:
         if not self._layout or not self._entries:
@@ -142,45 +186,62 @@ class CommitGraphWidget(QAbstractScrollArea):
             )
             return
 
+        # Plage de rangées visibles (pour ne pas peindre les milliers d'autres)
+        v = self.verticalScrollBar().value()
+        first = max(0, v // ROW_HEIGHT - 1)
+        last = min(len(self._entries), (v + self.viewport().height()) // ROW_HEIGHT + 1)
+        visible = range(first, last)
+
         painter.translate(
             LEFT_PADDING - self.horizontalScrollBar().value(),
-            -self.verticalScrollBar().value(),
+            -v,
         )
 
-        self._paint_edges(painter)
-        for idx, entry in enumerate(self._entries):
-            self._paint_node(painter, entry, idx)
+        self._paint_edges(painter, visible)
+        for idx in visible:
+            self._paint_node(painter, self._entries[idx], idx)
 
-    def _paint_edges(self, painter: QPainter) -> None:
+    def _paint_edges(self, painter: QPainter, visible_range) -> None:
         if not self._layout:
             return
+        first = visible_range.start
+        last = visible_range.stop
         for edge in self._layout.edges:
             child, parent = edge.child, edge.parent
-            cy = self._row_of(child) * ROW_HEIGHT + ROW_HEIGHT / 2
-            py = self._row_of(parent) * ROW_HEIGHT + ROW_HEIGHT / 2
+            cy = self._row_index.get(child.commit.hexsha, 0) * ROW_HEIGHT + ROW_HEIGHT / 2
+            py = self._row_index.get(parent.commit.hexsha, 0) * ROW_HEIGHT + ROW_HEIGHT / 2
+            if (cy < (first - 1) * ROW_HEIGHT or cy > (last + 1) * ROW_HEIGHT) and (
+                py < (first - 1) * ROW_HEIGHT or py > (last + 1) * ROW_HEIGHT
+            ):
+                continue
             cx = (child.column + 1) * COLUMN_WIDTH
             px = (parent.column + 1) * COLUMN_WIDTH
 
-            color = self._colors.get(parent.column, QColor("#555"))
+            color = self._color_of(child)
             pen = QPen(color, 2)
             pen.setCapStyle(Qt.PenCapStyle.RoundCap)
+            pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
             painter.setPen(pen)
 
             if px == cx:
+                # Ligne verticale directe (même lane)
                 painter.drawLine(int(cx), int(cy), int(px), int(py))
                 continue
 
+            # Gabarit « carré » (à la GitKraken) : descente verticale, trait
+            # horizontal à angle droit, puis remontée verticale jusqu'au parent.
             mid_y = (cy + py) / 2
-            path = QPainterPath()
-            path.moveTo(cx, cy)
-            path.cubicTo(cx, mid_y, px, mid_y, px, py)
+            path = QPainterPath(QPointF(cx, cy))
+            path.lineTo(cx, mid_y)
+            path.lineTo(px, mid_y)
+            path.lineTo(px, py)
             painter.drawPath(path)
 
     def _paint_node(self, painter: QPainter, entry: GraphNode, idx: int) -> None:
-        row = self._row_of(entry)
+        row = self._row_index.get(entry.commit.hexsha, 0)
         y = row * ROW_HEIGHT + ROW_HEIGHT / 2
         x = (entry.column + 1) * COLUMN_WIDTH
-        color = self._colors.get(entry.column, QColor("#61afef"))
+        color = self._color_of(entry)
 
         if entry.commit.hexsha == self._selected_sha:
             painter.setPen(QPen(QColor("#e5c07b"), 2))
@@ -266,10 +327,7 @@ class CommitGraphWidget(QAbstractScrollArea):
     # Géométrie
     # ------------------------------------------------------------------
     def _row_of(self, entry: GraphNode) -> int:
-        for idx, e in enumerate(self._entries):
-            if e.commit.hexsha == entry.commit.hexsha:
-                return idx
-        return 0
+        return self._row_index.get(entry.commit.hexsha, 0)
 
     def _format_date(self, commit: CommitInfo) -> str:
         if not commit.committed_datetime:
@@ -297,7 +355,9 @@ class CommitGraphWidget(QAbstractScrollArea):
         self.viewport().update()
 
     def scrollContentsBy(self, dx, dy) -> None:  # noqa: N802
-        self.viewport().update()
+        # Déplacement pixel des pixels déjà affichés : seules les bandes
+        # nouvellement exposées sont repeintes (bien plus fluide au scroll).
+        self.viewport().scroll(dx, dy)
         super().scrollContentsBy(dx, dy)
 
     def mousePressEvent(self, event) -> None:  # noqa: N802

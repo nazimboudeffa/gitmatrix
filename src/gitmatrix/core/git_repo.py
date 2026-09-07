@@ -80,13 +80,53 @@ class GitRepo:
     # ------------------------------------------------------------------
     # Informations générales
     # ------------------------------------------------------------------
-    def refs_of_sha(self, hexsha: str) -> List[RefInfo]:
-        """Refs pointant vers un commit identifié par son hash."""
+    def ref_map_by_commit(self) -> dict:
+        """Dictionnaire {hexsha_commit: [RefInfo, ...]} calculé en UNE commande git.
+
+        Évite l'appel subprocess par commit (performances sur les gros dépôts :
+        Phaser, kernels, etc. sont impossibles à charger autrement).
+        """
+        mapping: dict = {}
         try:
-            commit = self._repo.commit(hexsha)
+            lines = self._repo.git.for_each_ref(
+                "--format=%(refname)%00%(objectname)%00%(*objectname)"
+            ).splitlines()
         except Exception:
-            return []
-        return self.refs_of(commit)
+            lines = []
+        for line in lines:
+            parts = line.split("\x00")
+            if len(parts) < 3:
+                continue
+            refname, obj, obj_peeled = parts[0], parts[1], parts[2]
+            kind, name = self._classify_ref(refname)
+            target = obj_peeled or obj
+            mapping.setdefault(target, []).append(
+                RefInfo(name=name, kind=kind, target=target)
+            )
+        # HEAD (position courante)
+        try:
+            head_sha = self._repo.head.commit.hexsha
+            mapping.setdefault(head_sha, []).append(
+                RefInfo(
+                    name=self.active_branch or "HEAD",
+                    kind="head",
+                    target=head_sha,
+                )
+            )
+        except Exception:
+            pass
+        return mapping
+
+    @staticmethod
+    def _classify_ref(refname: str):
+        """(kind, nom) à partir d'une référence complète 'refs/heads/xxx'."""
+        if refname.startswith("refs/heads/"):
+            return "branch", refname[len("refs/heads/") :]
+        if refname.startswith("refs/remotes/"):
+            return "remote", refname[len("refs/remotes/") :]
+        if refname.startswith("refs/tags/"):
+            return "tag", refname[len("refs/tags/") :]
+        return "", refname
 
     @property
     def active_branch(self) -> Optional[str]:
@@ -100,9 +140,6 @@ class GitRepo:
     @property
     def repo_root(self) -> str:
         return self._repo.working_tree_dir or self._repo.git_dir
-
-    def is_dirty(self) -> bool:
-        return self._repo.is_dirty(untracked_files=True)
 
     # ------------------------------------------------------------------
     # Commits
@@ -159,82 +196,61 @@ class GitRepo:
     # ------------------------------------------------------------------
     # Refs (branches / HEAD / tags)
     # ------------------------------------------------------------------
-    def refs_of(self, commit: git.Commit) -> List[RefInfo]:
-        """Retourne les refs (branche, tag, HEAD) pointant vers ce commit."""
-        refs: List[RefInfo] = []
-        try:
-            if self._repo.head.commit == commit:
-                name = self.active_branch or "HEAD"
-                refs.append(RefInfo(name=name, kind="head", target=commit.hexsha))
-        except Exception:
-            pass
-        for branch in self._repo.branches:
-            try:
-                if branch.commit == commit:
-                    refs.append(
-                        RefInfo(name=branch.name, kind="branch", target=commit.hexsha)
-                    )
-            except Exception:
-                continue
-        for tag in self._repo.tags:
-            try:
-                target = tag.commit
-                if target == commit:
-                    refs.append(
-                        RefInfo(name=tag.name, kind="tag", target=commit.hexsha)
-                    )
-            except Exception:
-                continue
-        return refs
-
     def all_branches(self) -> List[RefInfo]:
+        """Branches locales, déduites de la map de refs (1 seule commande git)."""
         result: List[RefInfo] = []
-        for branch in self._repo.branches:
-            try:
-                result.append(
-                    RefInfo(
-                        name=branch.name,
-                        kind="branch",
-                        target=branch.commit.hexsha,
-                    )
-                )
-            except Exception:
-                continue
+        seen = set()
+        for refs in self.ref_map_by_commit().values():
+            for r in refs:
+                if r.kind == "branch" and r.name not in seen:
+                    seen.add(r.name)
+                    result.append(r)
         return result
-
-    def all_tags(self) -> List[RefInfo]:
-        result: List[RefInfo] = []
-        for tag in self._repo.tags:
-            try:
-                result.append(
-                    RefInfo(name=tag.name, kind="tag", target=tag.commit.hexsha)
-                )
-            except Exception:
-                continue
-        return result
-
-    # ------------------------------------------------------------------
-    # Etat du working tree / index
-    # ------------------------------------------------------------------
     def changes(self) -> List[FileChange]:
-        """Liste des changements (staged + unstaged + untracked)."""
+        """Liste des changements (staged + unstaged + untracked).
+
+        Calculée par UN seul ``git status --porcelain -z`` (rapide même sur
+        un dépôt comptant des milliers de fichiers).
+        """
         result: List[FileChange] = []
-        # Index vs HEAD (staged)
         try:
-            for item in self._repo.index.diff("HEAD"):
-                result.append(FileChange(path=item.a_path, staged=True, status=_status(item)))
-        except Exception:
-            pass
-        # Working tree vs index (unstaged)
-        try:
-            for item in self._repo.index.diff(None):
-                result.append(FileChange(path=item.a_path, staged=False, status=_status(item)))
-        except Exception:
-            pass
-        # Untracked
-        for uf in self._repo.untracked_files:
-            result.append(FileChange(path=uf, staged=False, status="U"))
+            raw = self._repo.git.status(
+                "--porcelain", "-z", "--untracked-files=all"
+            )
+        except Exception as exc:
+            raise GitMatrixError(f"Impossible de lire l'état du dépôt : {exc}")
+
+        records = raw.split("\0")
+        i = 0
+        while i < len(records):
+            rec = records[i]
+            i += 1
+            if not rec:
+                continue
+            st, path = rec[:2], rec[2:]
+            if "R" in st and i < len(records) and records[i]:
+                path = records[i]
+                i += 1
+            x, y = st[0], st[1]
+            if st == "??":
+                result.append(FileChange(path=path, staged=False, status="U"))
+                continue
+            if x != " " and x != "?":
+                result.append(FileChange(path=path, staged=True, status=self._code(x)))
+            if y != " " and y != "?":
+                result.append(FileChange(path=path, staged=False, status=self._code(y)))
         return result
+
+    @staticmethod
+    def _code(ch: str) -> str:
+        return {"A": "A", "M": "M", "D": "D", "R": "R", "C": "C"}.get(ch, "M")
+
+    def is_dirty(self) -> bool:
+        try:
+            out = self._repo.git.status("--porcelain", "--untracked-files=all")
+            return bool(out.strip())
+        except Exception:
+            return False
 
     # ------------------------------------------------------------------
     # Diff
@@ -318,16 +334,6 @@ class GitRepo:
 
     def init_or_open(path: str) -> "GitRepo":
         return GitRepo(path)
-
-
-def _status(item) -> str:
-    if getattr(item, "new_file", False):
-        return "A"
-    if getattr(item, "deleted_file", False):
-        return "D"
-    if getattr(item, "renamed_file", False):
-        return "R"
-    return "M"
 
 
 def _parse_diff(text: str) -> List[dict]:

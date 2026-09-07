@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional
 
-from gitmatrix.core.git_repo import CommitInfo, GitRepo, RefInfo
+from gitmatrix.core.git_repo import CommitInfo, RefInfo
 
 
 @dataclass
@@ -45,9 +45,13 @@ class GraphLayout:
       libre la plus proche à droite, sinon une nouvelle lane à la fin.
     """
 
-    def __init__(self, commits: List[CommitInfo], repo: Optional[GitRepo] = None):
+    def __init__(
+        self,
+        commits: List[CommitInfo],
+        ref_map: Optional[Dict[str, List[RefInfo]]] = None,
+    ):
         self.commits = commits
-        self.repo = repo
+        self.ref_map = ref_map or {}
         self.columns: Dict[str, int] = {}
         self.nodes: Dict[str, GraphNode] = {}
         self.edges: List[GraphEdge] = []
@@ -92,7 +96,7 @@ class GraphLayout:
         # 4. Nœuds avec leurs refs
         for commit in self.commits:
             col = self.columns.get(commit.hexsha, 0)
-            refs = self.repo.refs_of_sha(commit.hexsha) if self.repo else []
+            refs = self.ref_map.get(commit.hexsha, [])
             self.nodes[commit.hexsha] = GraphNode(commit=commit, column=col, refs=refs)
 
         # 5. Arêtes
