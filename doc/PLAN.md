@@ -13,11 +13,11 @@ Cochez les cases au fur et à mesure.
 Ci-dessous, les fondamentaux pour qu'un dépôt réel soit utilisable au quotidien.
 
 ### Remotes et synchronisation
-- [ ] `repo.remotes()` : liste des remotes (origin, etc.) dans la couche core
-- [ ] Afficher les branches distantes (`refs/remotes/`) dans le graphe
-  - [ ] badge violet « remote » distinct des branches locales
-- [ ] Actions toolbar : `Fetch`, `Pull`, `Push`
-- [ ] État amont (ahead/behind) affiché dans le panneau des branches
+- [x] `repo.remotes()` : liste des remotes (origin, etc.) dans la couche core
+- [x] Afficher les branches distantes (`refs/remotes/`) dans le graphe
+  - [x] badge violet « remote » distinct des branches locales
+- [x] Actions toolbar : `Fetch`, `Pull`, `Push`
+- [x] État amont (ahead/behind) affiché dans le panneau des branches
 
 ### Diff par commit
 - [ ] Sélectionner un commit ⮕ afficher son diff complet (vs son parent)

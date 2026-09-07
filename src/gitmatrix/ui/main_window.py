@@ -73,7 +73,9 @@ class MainWindow(QMainWindow):
         self.addToolBar(toolbar)
         toolbar.addAction("Ouvrir…", self._open_repo)
         toolbar.addAction("Actualiser", self._refresh)
+        toolbar.addAction("Fetch", self._fetch)
         toolbar.addAction("Pull", self._pull)
+        toolbar.addAction("Push", self._push)
         toolbar.addSeparator()
         toolbar.addAction("Stage All", self._stage_all)
         toolbar.addAction("Unstage All", self._unstage_all)
@@ -204,6 +206,30 @@ class MainWindow(QMainWindow):
         except GitMatrixError as exc:
             QMessageBox.critical(self, "Erreur", str(exc))
         self._refresh()
+
+    def _fetch(self) -> None:
+        if self._repo is None:
+            QMessageBox.information(self, "GitMatrix", "Ouvrez d'abord un dépôt.")
+            return
+        try:
+            output = self._repo.fetch()
+        except GitMatrixError as exc:
+            QMessageBox.critical(self, "Erreur", str(exc))
+            return
+        self._refresh()
+        self.status.showMessage(f"Fetch effectué : {output}", 8000)
+
+    def _push(self) -> None:
+        if self._repo is None:
+            QMessageBox.information(self, "GitMatrix", "Ouvrez d'abord un dépôt.")
+            return
+        try:
+            output = self._repo.push()
+        except GitMatrixError as exc:
+            QMessageBox.critical(self, "Erreur", str(exc))
+            return
+        self._refresh()
+        self.status.showMessage(f"Push effectué : {output}", 8000)
 
     def _pull(self) -> None:
         if self._repo is None:

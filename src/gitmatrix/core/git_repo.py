@@ -206,6 +206,17 @@ class GitRepo:
                     seen.add(r.name)
                     result.append(r)
         return result
+
+    def all_remote_branches(self) -> List[RefInfo]:
+        """Branches distantes (origin/main, …), déduites de la map de refs."""
+        result: List[RefInfo] = []
+        seen = set()
+        for refs in self.ref_map_by_commit().values():
+            for r in refs:
+                if r.kind == "remote" and r.name not in seen:
+                    seen.add(r.name)
+                    result.append(r)
+        return result
     def changes(self) -> List[FileChange]:
         """Liste des changements (staged + unstaged + untracked).
 
@@ -308,6 +319,8 @@ class GitRepo:
     def commit_all(self, message: str) -> str:
         if not message.strip():
             raise GitMatrixError("Le message de commit ne peut pas être vide.")
+        if not any(c.staged for c in self.changes()):
+            raise GitMatrixError("Aucun changement indexé à commiter.")
         try:
             new_commit = self._repo.index.commit(message.strip())
         except Exception as exc:
@@ -364,6 +377,64 @@ class GitRepo:
         except Exception:
             pass
         return None
+
+    # ------------------------------------------------------------------
+    # Remotes (fetch / push / statut amont)
+    # ------------------------------------------------------------------
+    def remotes(self) -> List[str]:
+        """Noms des remotes configurés (origin, upstream, …)."""
+        return [r.name for r in self._repo.remotes]
+
+    def fetch(self) -> str:
+        """Récupère les branches de tous les remotes (git fetch --all --prune)."""
+        try:
+            return self._repo.git.fetch("--all", "--prune")
+        except Exception as exc:
+            raise GitMatrixError(f"Échec du fetch : {exc}") from None
+
+    def push(self) -> str:
+        """Pousse la branche active vers son remote.
+
+        Sans upstream configuré (branche locale jamais poussée), on retombe
+        sur ``git push --set-upstream origin <branche>``.
+        """
+        branch = self.active_branch
+        if not branch:
+            raise GitMatrixError("Aucune branche active à pousser.")
+        if not self.remotes():
+            raise GitMatrixError("Aucun remote configuré pour ce dépôt.")
+        try:
+            return self._repo.git.push().strip()
+        except git.exc.GitCommandError as exc:
+            stderr = exc.stderr or ""
+            if "has no upstream branch" in stderr:
+                try:
+                    return self._repo.git.push(
+                        "--set-upstream", "origin", branch
+                    ).strip()
+                except Exception as exc2:
+                    raise GitMatrixError(f"Échec du push : {exc2}") from None
+            raise GitMatrixError(f"Échec du push : {exc}") from None
+        except Exception as exc:
+            raise GitMatrixError(f"Échec du push : {exc}") from None
+
+    def upstream_status(self, branch: Optional[str] = None) -> Optional[tuple]:
+        """(ahead, behind) de la branche par rapport à son upstream, sinon None.
+
+        ahead = commits locaux non poussés (→ push), behind = commits distants
+        non récupérés (→ pull). Basé sur ``git rev-list --left-right --count``.
+        """
+        name = branch or self.active_branch
+        if not name:
+            return None
+        try:
+            out = self._repo.git.rev_list(
+                "--left-right", "--count", f"{name}...@{{upstream}}"
+            )
+            left, right = out.split()
+            return int(left), int(right)
+        except Exception:
+            return None
 
     def init_or_open(path: str) -> "GitRepo":
         return GitRepo(path)

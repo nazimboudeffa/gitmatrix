@@ -18,10 +18,13 @@ class BranchPanel(QListWidget):
         super().__init__(parent)
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.customContextMenuRequested.connect(self._show_menu)
-        self.itemDoubleClicked.connect(
-            lambda item: self.branch_checked.emit(item.text())
-        )
+        self.itemDoubleClicked.connect(self._on_double_click)
         self._repo = None
+
+    def _on_double_click(self, item) -> None:
+        branch = item.data(Qt.ItemDataRole.UserRole)
+        if isinstance(branch, RefInfo) and branch.kind == "branch":
+            self.branch_checked.emit(branch.name)
 
     def set_repo(self, repo) -> None:
         self._repo = repo
@@ -37,7 +40,33 @@ class BranchPanel(QListWidget):
             if b.name == active:
                 item.setForeground(QBrush(QColor("#e5c07b")))
                 item.setText(f"{b.name}  ★")
+            status = self._repo.upstream_status(b.name)
+            if status is not None:
+                ahead, behind = status
+                parts = " ".join(
+                    p
+                    for p in (
+                        f"↑{ahead}" if ahead else "",
+                        f"↓{behind}" if behind else "",
+                    )
+                    if p
+                )
+                if parts:
+                    item.setText(f"{item.text()}  {parts}".strip())
             self.addItem(item)
+
+        # Branches distantes (affichage seul, non modifiables)
+        remotes = self._repo.all_remote_branches()
+        if remotes:
+            sep = QListWidgetItem("Distantes")
+            sep.setFlags(Qt.ItemFlag.NoItemFlags)
+            sep.setForeground(QBrush(QColor("#7b61b8")))
+            self.addItem(sep)
+            for r in remotes:
+                item = QListWidgetItem(r.name)
+                item.setData(Qt.ItemDataRole.UserRole, r)
+                item.setForeground(QBrush(QColor("#b9b4d6")))
+                self.addItem(item)
 
     def _show_menu(self, pos) -> None:
         item = self.itemAt(pos)
@@ -45,7 +74,7 @@ class BranchPanel(QListWidget):
         menu.addAction("Nouvelle branche…", self._new_branch)
         if item is not None:
             branch = item.data(Qt.ItemDataRole.UserRole)
-            if branch is not None and isinstance(branch, RefInfo):
+            if isinstance(branch, RefInfo) and branch.kind == "branch":
                 menu.addAction(
                     "Basculer (checkout)", lambda: self.branch_checked.emit(branch.name)
                 )

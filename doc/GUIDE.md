@@ -139,7 +139,9 @@ python -m gitmatrix -r chemin\vers\mon\repo
 | ------------- | ----- |
 | Ouvrir…       | Ouvre un dépôt |
 | Actualiser    | Recharge graphe + changements |
+| Fetch         | Récupère les branches de tous les remotes |
 | Pull          | Récupère et fusionne les changements du remote |
+| Push          | Pousse la branche active (crée l'upstream si besoin) |
 | Stage All     | Indexe tous les changements |
 | Unstage All   | Dé-indexe tout |
 | Commit…       | Ouvre la fenêtre de commit |
@@ -176,9 +178,10 @@ git --help
 
 ### 2.7 Limites actuelles — et la suite
 
-Cette première version couvre : graphe, staging, diff, branches, commit, **pull**.
-Les **push/fetch**, les **fusions/rebase**, le **stash** et les **tags** sont à
-l'étape Phase 1 des plans → voir [`doc/PLAN.md`](PLAN.md).
+Cette première version couvre : graphe, staging, diff, branches, commit,
+**fetch/pull/push**, ahead/behind dans le panneau des branches.
+Les **fusions/rebase**, le **stash** et les **tags** sont à l'étape Phase 1/2 des
+plans → voir [`doc/PLAN.md`](PLAN.md).
 
 ### 2.8 Repos de test
 
