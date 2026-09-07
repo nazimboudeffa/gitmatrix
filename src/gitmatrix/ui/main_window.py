@@ -79,8 +79,6 @@ class MainWindow(QMainWindow):
         toolbar.addSeparator()
         act_commit = toolbar.addAction("Commit…", self._open_commit_dialog)
         self._commit_action = act_commit
-        toolbar.addSeparator()
-        toolbar.addAction("Quitter", self.close)
 
         # Espace poussant le bouton About vers la droite
         spacer = QWidget()
