@@ -130,12 +130,22 @@ class GitRepo:
         )
 
     def walk_commits(self, count: int = 1000) -> List[CommitInfo]:
-        """Liste horodatée des commits (plus récent en premier), couvrant toutes les refs."""
+        """Commits (plus récent en premier) couvrant toutes les refs.
+
+        L'ordre utilise ``--topo-order`` : un commit est toujours listé avant
+        ses parents, et les lignes de travail ne sont pas entremêlées. C'est
+        indispensable à un rendu propre du graphe quand plusieurs personnes
+        poussent sur le dépôt.
+        """
         commits: List[CommitInfo] = []
         try:
             if self._repo.head.is_valid():
                 for row, commit in enumerate(
-                    self._repo.iter_commits(rev="--all", max_count=count)
+                    self._repo.iter_commits(
+                        rev="--all",
+                        topo_order=True,
+                        max_count=count,
+                    )
                 ):
                     commits.append(self._commit_info(commit, row))
         except Exception as exc:  # dépôt vide ou erreur

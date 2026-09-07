@@ -30,12 +30,19 @@ class GraphEdge:
 class GraphLayout:
     """Attribue une colonne (lane) à chaque commit puis construit les arêtes.
 
-    Algorithme façon ``git log --graph`` :
-    - Une liste de lanes parcourue du haut vers le bas (fait le plus récent
-      au plus ancien).
-    - Chaque extrémité de branche (tip) ouvre une nouvelle lane.
-    - Un parent est placé dans l'ancienne lane de son enfant ; les parents
-      suivants (merges) ouvrent de nouvelles lanes.
+    Algorithme inspiré de ``git log --graph``, adapté pour rester propre même
+    quand plusieurs personnes travaillent sur le dépôt :
+
+    - Les commits arrivent en **ordre topologique** (un commit avant ses parents).
+    - Une lane est une « attente » : elle contient le hash du commit attendu
+      plus bas. ``None`` = lane libre.
+    - Chaque commit prend la première lane qui l'attend ; sinon il ouvre une
+      nouvelle lane.
+    - Quand un commit est consommé, **toutes** les lanes qui l'attendaient sont
+      libérées (évite les lignes fantômes héritées d'un parent partagé).
+    - Le premier parent hérite de la lane du commit ; les parents suivants
+      réutilisent une lane qui attend déjà ce hash, sinon prennent la lane
+      libre la plus proche à droite, sinon une nouvelle lane à la fin.
     """
 
     def __init__(self, commits: List[CommitInfo], repo: Optional[GitRepo] = None):
@@ -48,51 +55,47 @@ class GraphLayout:
         self._build()
 
     def _build(self) -> None:
-        # lanes : liste de sha "attendus" dans une colonne ; None = libre
         lanes: List[Optional[str]] = []
 
         for commit in self.commits:
             sha = commit.hexsha
 
-            # Emplacement de ce commit : première lane qui l'attend sinon nouvelle lane
-            col = None
-            for idx, waiting in enumerate(lanes):
-                if waiting == sha:
-                    col = idx
-                    break
+            # 1. Lane qui attend ce commit ; sinon nouvelle lane
+            col = self._find_lane(lanes, sha)
             if col is None:
                 lanes.append(sha)
                 col = len(lanes) - 1
             self.columns[sha] = col
             self.max_columns = max(self.max_columns, col + 1)
 
-            lanes[col] = None  # la lane est consommée par ce commit
+            # 2. Consommer TOUTES les lanes qui attendaient ce commit
+            #    (une même branche peut avoir réservé le parent plusieurs fois).
+            freeing = [i for i, w in enumerate(lanes) if w == sha]
+            for i in freeing:
+                lanes[i] = None
 
-            # Parents : le premier hérite de la lane, les autres en ouvrent de nouvelles
-            for parent_idx, parent_sha in enumerate(commit.parents):
-                if parent_idx == 0:
-                    lanes[col] = parent_sha
+            # 3. Réserver les parents
+            for pi, parent in enumerate(commit.parents):
+                if pi == 0:
+                    # Premier parent : reprend la lane du commit
+                    if lanes[col] is None:
+                        lanes[col] = parent
+                        continue
+                    # case rare : la lane a été reprise entre-temps
+                    lanes[self._take_slot(lanes, col)] = parent
                 else:
-                    # lane libre la plus proche, sinon nouvelle
-                    free = None
-                    for i, w in enumerate(lanes):
-                        if w is None:
-                            free = i
-                            break
-                    if free is None:
-                        lanes.append(parent_sha)
-                        free = len(lanes) - 1
-                    else:
-                        lanes[free] = parent_sha
-                    self.max_columns = max(self.max_columns, free + 1)
+                    # Parents merge : réutiliser une lane qui les attend déjà
+                    existing = self._find_lane(lanes, parent)
+                    if existing is None:
+                        lanes[self._take_slot(lanes, col)] = parent
 
-        # Construction des nœuds avec les refs
+        # 4. Nœuds avec leurs refs
         for commit in self.commits:
             col = self.columns.get(commit.hexsha, 0)
             refs = self.repo.refs_of_sha(commit.hexsha) if self.repo else []
             self.nodes[commit.hexsha] = GraphNode(commit=commit, column=col, refs=refs)
 
-        # Construction des arêtes
+        # 5. Arêtes
         for commit in self.commits:
             child = self.nodes.get(commit.hexsha)
             if child is None:
@@ -111,3 +114,35 @@ class GraphLayout:
                         parent_column=pc,
                     )
                 )
+
+    def _find_lane(self, lanes: List[Optional[str]], sha: str) -> Optional[int]:
+        """Index de la première lane qui attend ce sha, sinon None."""
+        for i, w in enumerate(lanes):
+            if w == sha:
+                return i
+        return None
+
+    def _find_free_lane(self, lanes: List[Optional[str]], prefer: Optional[int] = None) -> Optional[int]:
+        """Lane libre la plus proche de `prefer` (d'abord à droite, puis à gauche)."""
+        if not lanes:
+            return None
+        if prefer is not None and lanes[prefer] is None:
+            return prefer
+        n = len(lanes)
+        for offset in range(1, n):
+            right = prefer + offset if prefer is not None else offset
+            left = prefer - offset if prefer is not None else None
+            if right is not None and right < n and lanes[right] is None:
+                return right
+            if left is not None and left >= 0 and lanes[left] is None:
+                return left
+        return None
+
+    def _take_slot(self, lanes: List[Optional[str]], prefer: int) -> int:
+        """Réserve un emplacement pour un parent : lane libre proche, sinon nouvelle lane."""
+        slot = self._find_free_lane(lanes, prefer)
+        if slot is None:
+            lanes.append(None)
+            slot = len(lanes) - 1
+        self.max_columns = max(self.max_columns, slot + 1)
+        return slot
