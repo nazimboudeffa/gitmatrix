@@ -13,6 +13,8 @@ Un client Git **visuel** pour Python (PySide6 + GitPython), pensé comme une alt
 
 ## Installation
 
+Installer [Python](https://www.python.org/)
+
 ```bash
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1 
