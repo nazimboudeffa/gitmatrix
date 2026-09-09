@@ -44,7 +44,7 @@ class AboutDialog(QDialog):
 
         desc = QLabel(
             "Un client Git visuel et léger, pensé comme une alternative "
-            "libre et open-source à GitKraken."
+            "libre et open-source au clients Git existants."
         )
         desc.setWordWrap(True)
         desc.setAlignment(Qt.AlignmentFlag.AlignCenter)

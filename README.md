@@ -1,7 +1,6 @@
 # GitMatrix
 
-Un client Git **visuel** pour Python (PySide6 + GitPython), pensé comme une
-alternative open-source à GitKraken.
+Un client Git **visuel**, pensé comme une alternative libre et open-source des clients Git existants.
 
 ## Fonctionnalités
 
@@ -70,4 +69,4 @@ src/gitmatrix/
 
 ## Licence
 
-MIT.
+GNU GPL v3

@@ -1,7 +1,7 @@
 [project]
 name = "gitmatrix"
 version = "0.3.0"
-description = "Un client Git visuel et léger, concurrent de GitKraken"
+description = "Un client Git visuel et léger"
 readme = "README.md"
 requires-python = ">=3.9"
 dependencies = [
