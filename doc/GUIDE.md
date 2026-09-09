@@ -137,6 +137,7 @@ python -m gitmatrix -r chemin\vers\mon\repo
 
 | Bouton        | Raccourci    | Effet |
 | ------------- | ------------ | ----- |
+| Cloner        | —            | Clone un dépôt distant (URL + emplacement) |
 | Ouvrir        | Ctrl+O       | Ouvre un dépôt |
 | Actualiser    | Ctrl+R       | Recharge graphe + changements |
 | Fetch         | —            | Récupère les branches de tous les remotes |

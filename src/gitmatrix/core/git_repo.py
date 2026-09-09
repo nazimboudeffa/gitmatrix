@@ -419,6 +419,15 @@ class GitRepo:
         except Exception as exc:
             raise GitMatrixError(f"Impossible de basculer sur {name} : {exc}")
 
+    @staticmethod
+    def clone(url: str, dest: str) -> GitRepo:
+        """Clone un dépôt distant vers ``dest`` et renvoie une façade ouverte."""
+        try:
+            Repo.clone_from(url, dest)
+        except Exception as exc:
+            raise GitMatrixError(f"Impossible de cloner {url} : {exc}")
+        return GitRepo(dest)
+
     def pull(self) -> str:
         """Récupère et fusionne les changements du remote.
 

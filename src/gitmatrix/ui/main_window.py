@@ -30,6 +30,7 @@ from gitmatrix.widgets.diff_viewer import DiffViewer
 from gitmatrix.widgets.branch_panel import BranchPanel
 from gitmatrix.ui.commit_dialog import CommitDialog
 from gitmatrix.ui.about_dialog import AboutDialog
+from gitmatrix.ui.clone_dialog import CloneDialog
 
 _ICONS = Path(__file__).resolve().parent.parent / "assets" / "icons"
 
@@ -88,6 +89,8 @@ class MainWindow(QMainWindow):
         self.addToolBar(toolbar)
 
         # Groupe 1 : Fichier (à gauche)
+        act_clone = toolbar.addAction(_icon("clone"), "Cloner", self._clone_repo)
+        act_clone.setToolTip("Cloner un dépôt distant")
         act_open = toolbar.addAction(_icon("open"), "Ouvrir", self._open_repo)
         act_open.setToolTip("Ouvrir un dépôt (Ctrl+O)")
         self._set_shortcut(act_open, "Ctrl+O")
@@ -140,7 +143,7 @@ class MainWindow(QMainWindow):
 
         # Groupe 7 : À propos (à droite, seul)
         act_about = toolbar.addAction(_icon("about"), "À propos", self._open_about)
-        self._actions_to_keep = {act_about}
+        self._actions_to_keep = {act_about, act_clone}
 
         # ------------------------------------------------------------------
         # Status bar — chips (branche / dirty) + infos droites (staged/unstaged)
@@ -300,6 +303,23 @@ class MainWindow(QMainWindow):
         path = QFileDialog.getExistingDirectory(self, "Choisir un dépôt Git")
         if path:
             self.load_repo(path)
+
+    def _clone_repo(self) -> None:
+        dialog = CloneDialog(self)
+        if not dialog.exec():
+            return
+        url, dest = dialog.values()
+        if not url or not dest:
+            QMessageBox.warning(
+                self, "Cloner", "L'URL et l'emplacement sont requis."
+            )
+            return
+        try:
+            repo = GitRepo.clone(url, dest)
+        except GitMatrixError as exc:
+            QMessageBox.critical(self, "Erreur", str(exc))
+            return
+        self.load_repo(repo.path)
 
     def _refresh(self) -> None:
         if self._repo is None:
