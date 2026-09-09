@@ -47,36 +47,47 @@
 
   /* ── Toolbar ────────────────────────────────────────────────────── */
   .toolbar {
+    position: relative;
     display: flex;
     align-items: center;
+    justify-content: space-between;
     gap: 2px;
-    padding: 6px 12px;
+    padding: 5px 12px;
     background: var(--surface);
     border-bottom: 1px solid var(--border);
     flex-shrink: 0;
   }
+  .toolbar-center {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+  }
   .toolbar-group {
     display: flex;
     align-items: center;
-    gap: 2px;
+    gap: 3px;
   }
   .toolbar-sep {
     width: 1px;
-    height: 24px;
+    height: 34px;
     background: var(--border);
-    margin: 0 8px;
+    margin: 0 9px;
   }
   .toolbar-btn {
     display: inline-flex;
+    flex-direction: column;
     align-items: center;
-    gap: 6px;
-    padding: 6px 12px;
+    justify-content: center;
+    gap: 3px;
+    padding: 4px 10px;
     border: 1px solid transparent;
     border-radius: var(--radius-sm);
     background: transparent;
     color: var(--fg);
     font: inherit;
-    font-size: 12px;
+    font-size: 10px;
     cursor: pointer;
     transition: background 0.12s, border-color 0.12s;
     white-space: nowrap;
@@ -99,13 +110,12 @@
   }
   .toolbar-btn--danger { color: var(--red); }
   .toolbar-btn--danger:hover { background: var(--red-soft); }
-  .toolbar-spacer { flex: 1; }
-  .toolbar-kbd {
-    font-family: var(--font-mono);
-    font-size: 10px;
-    color: var(--muted);
-    margin-left: 4px;
+  .toolbar-btn--branch {
+    background: var(--surface-2);
+    border-color: var(--border);
+    font-weight: 600;
   }
+  .toolbar-btn--branch:hover { border-color: var(--muted); }
 
   /* ── Main layout ────────────────────────────────────────────────── */
   .app-main {
@@ -582,50 +592,61 @@
     </button>
     <button class="toolbar-btn" data-od-id="btn-refresh">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
-      Actualiser<span class="toolbar-kbd">Ctrl+R</span>
+      Actualiser
     </button>
   </div>
 
-  <div class="toolbar-sep"></div>
+  <div class="toolbar-center">
+    <div class="toolbar-group">
+      <button class="toolbar-btn" data-od-id="btn-fetch">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><polyline points="23 20 23 14 17 14"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/></svg>
+        Fetch
+      </button>
+      <button class="toolbar-btn" data-od-id="btn-pull">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>
+        Pull
+      </button>
+    </div>
 
-  <div class="toolbar-group">
-    <button class="toolbar-btn" data-od-id="btn-fetch">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><polyline points="23 20 23 14 17 14"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/></svg>
-      Fetch
+    <div class="toolbar-sep"></div>
+
+    <button class="toolbar-btn toolbar-btn--branch" data-od-id="btn-branch">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></svg>
+      main
     </button>
-    <button class="toolbar-btn" data-od-id="btn-pull">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>
-      Pull
+
+    <div class="toolbar-sep"></div>
+
+    <div class="toolbar-group">
+      <button class="toolbar-btn" data-od-id="btn-stage-all">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+        Stage All
+      </button>
+      <button class="toolbar-btn toolbar-btn--danger" data-od-id="btn-unstage-all">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+        Unstage All
+      </button>
+    </div>
+
+    <div class="toolbar-sep"></div>
+
+    <button class="toolbar-btn toolbar-btn--primary" data-od-id="btn-commit">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><line x1="1.05" y1="12" x2="7" y2="12"/><line x1="17.01" y1="12" x2="22.96" y2="12"/></svg>
+      Commit
     </button>
+
+    <div class="toolbar-sep"></div>
+
     <button class="toolbar-btn" data-od-id="btn-push">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
       Push
     </button>
   </div>
 
-  <div class="toolbar-sep"></div>
-
-  <div class="toolbar-group">
-    <button class="toolbar-btn" data-od-id="btn-stage-all">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-      Stage All
-    </button>
-    <button class="toolbar-btn toolbar-btn--danger" data-od-id="btn-unstage-all">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
-      Unstage All
-    </button>
-  </div>
-
-  <div class="toolbar-sep"></div>
-
-  <button class="toolbar-btn toolbar-btn--primary" data-od-id="btn-commit">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><line x1="1.05" y1="12" x2="7" y2="12"/><line x1="17.01" y1="12" x2="22.96" y2="12"/></svg>
-    Commit<span class="toolbar-kbd" style="color:oklch(30% 0.012 250)">Ctrl+↵</span>
+  <button class="toolbar-btn" data-od-id="btn-about">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+    À propos
   </button>
-
-  <div class="toolbar-spacer"></div>
-
-  <button class="toolbar-btn" data-od-id="btn-about">À propos</button>
 </div>
 
 <!-- ═══ MAIN CONTENT ═════════════════════════════════════════════ -->
@@ -855,7 +876,7 @@
     { sha:'a3f7b2c', subject:'Fix: resolve virtual scroll flicker on large repos', author:'Nazim Boudeffa', date:'2026-09-08', branch:0, refs:[{kind:'head',name:'HEAD'},{kind:'branch',name:'main'}], parents:[1] },
     { sha:'e8c1d4a', subject:'Add commit tooltip with full message preview', author:'Nazim Boudeffa', date:'2026-09-07', branch:0, refs:[], parents:[2] },
     { sha:'7f2b9e3', subject:'Improve graph node rendering — larger radius, hover ring', author:'Nazim Boudeffa', date:'2026-09-06', branch:0, refs:[], parents:[3] },
-    { sha:'b4d6f1a', subject:'Restructure toolbar with grouped actions and shortcuts', author:'Nazim Boudeffa', date:'2026-09-05', branch:0, refs:[], parents:[4] },
+    { sha:'b4d6f1a', subject:'Restructure toolbar with grouped actions', author:'Nazim Boudeffa', date:'2026-09-05', branch:0, refs:[], parents:[4] },
     { sha:'c9e3a78', subject:'Merge branch feat/auth into main', author:'Nazim Boudeffa', date:'2026-09-04', branch:0, refs:[], parents:[4,6] },
     { sha:'d2f8b15', subject:'feat: add JWT token refresh mechanism', author:'Nazim Boudeffa', date:'2026-09-03', branch:1, refs:[{kind:'branch',name:'feat/auth'}], parents:[6] },
     { sha:'1a4e9c7', subject:'feat: implement login form with validation', author:'Nazim Boudeffa', date:'2026-09-02', branch:1, refs:[], parents:[7] },
@@ -868,7 +889,7 @@
     0: '@@ -14,6 +14,12 @@\n-        self.setVerticalScrollBarPolicy(ScrollBarAlwaysOff)\n+        self.setVerticalScrollBarPolicy(ScrollBarAsNeeded)\n+        self._scroll_timer = QTimer()\n+        self._scroll_timer.setSingleShot(True)\n+        self._scroll_timer.setInterval(16)\n         viewport().setMouseTracking(True)',
     1: '@@ -38,6 +38,22 @@\n+    def _paint_tooltip(self, painter, entry, x, y):\n+        msg = entry.commit.subject or "…"\n+        if len(msg) > 60:\n+            msg = msg[:57] + "…"\n+        painter.drawText(QRectF(x, y-18, 400, 20), msg)',
     2: '@@ -23,1 +23,1 @@\n-NODE_RADIUS = 6\n+NODE_RADIUS = 8',
-    3: '@@ -71,6 +71,8 @@\n+        self._commit_action = toolbar.addAction("Commit…", self._open_commit_dialog)\n+        self._commit_action.setShortcut("Ctrl+Return")',
+    3: '@@ -71,6 +71,8 @@\n+        self._commit_action = toolbar.addAction("Commit…", self._open_commit_dialog)\n+        b = toolbar.widgetForAction(self._commit_action)\n+        b.setObjectName("ActionCommit")',
   };
 
   // ── Graph rendering ────────────────────────────────────────────────

@@ -18,6 +18,7 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QSizePolicy,
     QToolButton,
+    QMenu,
 )
 from PySide6.QtGui import QIcon, QKeySequence, QAction, QShortcut
 
@@ -82,11 +83,11 @@ class MainWindow(QMainWindow):
         toolbar = QToolBar("Principal")
         toolbar.setMovable(False)
         toolbar.setIconSize(QSize(15, 15))
-        toolbar.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+        toolbar.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextUnderIcon)
         self._toolbar = toolbar
         self.addToolBar(toolbar)
 
-        # Groupe 1 : Fichier
+        # Groupe 1 : Fichier (à gauche)
         act_open = toolbar.addAction(_icon("open"), "Ouvrir", self._open_repo)
         act_open.setToolTip("Ouvrir un dépôt (Ctrl+O)")
         self._set_shortcut(act_open, "Ctrl+O")
@@ -94,16 +95,20 @@ class MainWindow(QMainWindow):
         act_refresh.setToolTip("Recharger le graphe (Ctrl+R)")
         self._set_shortcut(act_refresh, "Ctrl+R")
 
-        # Groupe 2 : Synchronisation
+        # Groupe 2 : Branche (contexte) — sélecteur, à côté d'Actualiser
         toolbar.addSeparator()
+        self._branch_btn = self._make_branch_button()
+        toolbar.addWidget(self._branch_btn)
+
+        # Espaceur gauche : centre le bloc workflow (façon GitKraken)
+        toolbar.addWidget(self._stretch())
+
+        # Groupe 3 : Récupérer (avant le travail) — fetch / pull
         act_fetch = toolbar.addAction(_icon("fetch"), "Fetch", self._fetch)
         act_pull = toolbar.addAction(_icon("pull"), "Pull", self._pull)
-        act_push = toolbar.addAction(_icon("push"), "Push", self._push)
-        act_push.setToolTip("Pousser la branche active (Ctrl+P)")
-        self._set_shortcut(act_push, "Ctrl+P")
-
-        # Groupe 3 : Staging
         toolbar.addSeparator()
+
+        # Groupe 4 : Staging — préparer le contenu du commit
         act_stage_all = toolbar.addAction(
             _icon("stage-all"), "Stage All", self._stage_all
         )
@@ -114,7 +119,7 @@ class MainWindow(QMainWindow):
         )
         self._mark_danger(act_unstage_all)
 
-        # Groupe 4 : Commit (action primaire, dorée) après le staging
+        # Groupe 5 : Commit (action primaire, dorée)
         toolbar.addSeparator()
         act_commit = toolbar.addAction(_icon("commit"), "Commit", self._open_commit_dialog)
         self._commit_action = act_commit
@@ -124,13 +129,16 @@ class MainWindow(QMainWindow):
             b.setToolTip("Créer un commit (Ctrl+Return)")
             self._set_shortcut(act_commit, "Ctrl+Return")
 
-        # Espace poussant À propos tout à droite
-        spacer = QWidget()
-        spacer.setSizePolicy(
-            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred
-        )
-        toolbar.addWidget(spacer)
+        # Groupe 6 : Publier (après le commit) — push
+        toolbar.addSeparator()
+        act_push = toolbar.addAction(_icon("push"), "Push", self._push)
+        act_push.setToolTip("Pousser la branche active (Ctrl+P)")
+        self._set_shortcut(act_push, "Ctrl+P")
 
+        # Espaceur droit : équilibre le bloc central
+        toolbar.addWidget(self._stretch())
+
+        # Groupe 7 : À propos (à droite, seul)
         act_about = toolbar.addAction(_icon("about"), "À propos", self._open_about)
         self._actions_to_keep = {act_about}
 
@@ -175,12 +183,45 @@ class MainWindow(QMainWindow):
         self._set_actions_enabled(False)
         self._update_status()
 
-    # ------------------------------------------------------------------
-    # Racourcis clavier
-    # ------------------------------------------------------------------
+    @staticmethod
+    def _stretch() -> QWidget:
+        w = QWidget()
+        w.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred
+        )
+        return w
+
     def _set_shortcut(self, action: QAction, seq: str) -> None:
         sc = QShortcut(QKeySequence(seq), self)
         sc.activated.connect(action.trigger)
+
+    def _make_branch_button(self) -> QToolButton:
+        btn = QToolButton()
+        btn.setObjectName("ActionBranch")
+        btn.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextUnderIcon)
+        btn.setIconSize(QSize(15, 15))
+        btn.setIcon(_icon("branch"))
+        btn.setText("Branche")
+        btn.setToolTip("Branche active — menu pour basculer")
+        btn.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
+        btn.setMenu(QMenu(self))
+        btn.setEnabled(False)
+        return btn
+
+    def _refresh_branch_menu(self) -> None:
+        menu = self._branch_btn.menu()
+        menu.clear()
+        if self._repo is None:
+            return
+        active = self._repo.active_branch
+        for b in self._repo.all_branches():
+            a = menu.addAction(b.name)
+            a.setCheckable(True)
+            a.setChecked(b.name == active)
+            if b.name != active:
+                a.triggered.connect(
+                    lambda _=False, n=b.name: self._checkout_branch(n)
+                )
 
     def _mark_danger(self, action: QAction) -> None:
         b = self._toolbar.widgetForAction(action)
@@ -225,6 +266,7 @@ class MainWindow(QMainWindow):
             if a in self._actions_to_keep:
                 continue
             a.setEnabled(enabled)
+        self._branch_btn.setEnabled(enabled)
 
     # ------------------------------------------------------------------
     # Constructeurs de panneaux
@@ -265,6 +307,7 @@ class MainWindow(QMainWindow):
         try:
             self.commit_graph.set_repo(self._repo)
             self.branches.refresh()
+            self._refresh_branch_menu()
             self.files.set_changes(self._repo.changes())
             # re-afficher le diff du commit sélectionné si présent
             self._refresh_commit_detail()
@@ -424,6 +467,7 @@ class MainWindow(QMainWindow):
         branch = self._repo.active_branch or "(détaché)"
         self._sb_branch.setText(branch)
         self._sb_branch.setVisible(True)
+        self._branch_btn.setText(self._repo.active_branch or "Branche")
 
         changes = self._repo.changes()
         n_staged = sum(1 for c in changes if c.staged)

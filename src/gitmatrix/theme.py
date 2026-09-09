@@ -77,6 +77,19 @@ QToolBar QToolButton#ActionDanger {
     color: #e06c75;
 }
 
+/* Bouton de branche courant (sélecteur) dans la toolbar */
+QToolBar QToolButton#ActionBranch {
+    background-color: #2d3138;
+    border-color: #3a3f46;
+    font-weight: 600;
+}
+QToolBar QToolButton#ActionBranch:hover {
+    border-color: #9da5b4;
+}
+QToolBar QToolButton::menu-indicator {
+    image: none;
+}
+
 QTreeWidget, QListWidget, QPlainTextEdit {
     background-color: #22252b;
     border: 1px solid #32363e;

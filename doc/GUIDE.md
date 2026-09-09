@@ -141,14 +141,16 @@ python -m gitmatrix -r chemin\vers\mon\repo
 | Actualiser    | Ctrl+R       | Recharge graphe + changements |
 | Fetch         | —            | Récupère les branches de tous les remotes |
 | Pull          | —            | Récupère et fusionne les changements du remote |
-| Push          | Ctrl+P       | Pousse la branche active (crée l'upstream si besoin) |
+| Branche       | —            | Affiche la branche active ; le menu permet de basculer |
 | Stage All     | Ctrl+S       | Indexe tous les changements |
 | Unstage All   | —            | Dé-indexe tout |
 | Commit        | Ctrl+Retour  | Ouvre la fenêtre de commit |
+| Push          | Ctrl+P       | Pousse la branche active (crée l'upstream si besoin) |
 | À propos      | —            | Info + lien de soutien |
 
-> La barre d'outils regroupe les actions par catégorie (fichier, synchronisation,
-> staging) avec icônes ; **Commit** est le bouton principal à droite.
+> La barre d'outils est organisée par zones : à gauche le **contexte** (ouvrir,
+> actualiser, choisir/créer une branche), au centre le **workflow** Git
+> (Fetch/Pull, staging, Commit/Push). **Commit** est le bouton principal (doré).
 
 ### 2.4 Le workflow typique
 

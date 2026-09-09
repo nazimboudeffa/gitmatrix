@@ -18,7 +18,7 @@ from gitmatrix.core.git_repo import CommitInfo, GitRepo, RefInfo
 from gitmatrix.models.graph import GraphLayout, GraphNode
 from gitmatrix.theme import COLOR_PALETTE
 
-ROW_HEIGHT = 30
+ROW_HEIGHT = 42
 COLUMN_WIDTH = 22
 LEFT_PADDING = 16
 NODE_RADIUS = 8  # agrandi (6 → 8) pour une meilleure visée
@@ -294,15 +294,15 @@ class CommitGraphWidget(QAbstractScrollArea):
 
         painter.setPen(QPen(QColor("#6b7381")))
         painter.drawText(
-            QRectF(text_x, y - ROW_HEIGHT / 2 + 2, 420, 16),
+            QRectF(text_x, y - 14, 420, 14),
             Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop,
             f"{entry.commit.author_name}  ·  {self._format_date(entry.commit)}",
         )
 
         painter.setPen(QPen(QColor("#d7dae0")))
         painter.drawText(
-            QRectF(text_x, y - 2, 520, 22),
-            Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
+            QRectF(text_x, y + 3, 520, 16),
+            Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop,
             entry.commit.subject or "…",
         )
 
