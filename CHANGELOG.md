@@ -2,7 +2,7 @@
 
 Toutes les modifications notables de GitMatrix sont documentées ici.
 
-## v0.1.1 — 2026-09-09
+## v0.2.0 — 2026-09-09
 
 **Intégration du redesign v2**
 
