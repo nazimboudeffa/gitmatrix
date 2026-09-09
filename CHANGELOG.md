@@ -2,6 +2,27 @@
 
 Toutes les modifications notables de GitMatrix sont documentées ici.
 
+## v0.3.0 — 2026-09-09
+
+**Toolbar repensée (maquette v2)**
+
+- Zones distinctes : *contexte* à gauche (cloner, ouvrir, actualiser, choisir
+  la branche), *workflow* au centre (fetch, pull, staging, commit, push),
+  *À propos* à droite
+- Icônes au-dessus des libellés ; **Commit** reste le bouton primaire doré
+- **Bouton Cloner** : clone un dépôt distant (URL + emplacement) puis l'ouvre
+- **Sélecteur de branche** dans la toolbar à côté d'Actualiser (menu de bascule)
+
+**Graphe des commits**
+
+- Espacement vertical accru entre commits (30 → 42 px)
+- Auteur et message rapprochés et ancrés au nœud, quel que soit l'espacement
+
+**Corrections & divers**
+
+- Raccourcis clavier conservés (Ctrl+O/R/S/P, Ctrl+Return)
+- Bouton à propos toujours actif ; actions de clonage actives sans dépôt
+
 ## v0.2.0 — 2026-09-09
 
 **Intégration du redesign v2**
