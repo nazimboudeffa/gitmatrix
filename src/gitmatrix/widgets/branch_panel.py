@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QColor, QBrush
+from PySide6.QtGui import QColor, QBrush, QFont
 from PySide6.QtWidgets import QListWidget, QListWidgetItem, QMenu, QInputDialog, QMessageBox
 
 from gitmatrix.core.git_repo import RefInfo, GitMatrixError
@@ -38,7 +38,12 @@ class BranchPanel(QListWidget):
             item = QListWidgetItem(b.name)
             item.setData(Qt.ItemDataRole.UserRole, b)
             if b.name == active:
+                # Branche active : fond doré discret + texte accent + gras
                 item.setForeground(QBrush(QColor("#e5c07b")))
+                font = QFont(self.font())
+                font.setBold(True)
+                item.setFont(font)
+                item.setBackground(QBrush(QColor("#2a2e26")))
                 item.setText(f"{b.name}  ★")
             status = self._repo.upstream_status(b.name)
             if status is not None:

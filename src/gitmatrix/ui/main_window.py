@@ -10,13 +10,16 @@ from PySide6.QtWidgets import (
     QSplitter,
     QWidget,
     QVBoxLayout,
+    QHBoxLayout,
     QLabel,
     QToolBar,
     QFileDialog,
     QMessageBox,
-    QHBoxLayout,
     QSizePolicy,
+    QPushButton,
+    QToolButton,
 )
+from PySide6.QtGui import QKeySequence, QAction, QShortcut
 
 from gitmatrix.core.git_repo import GitMatrixError, GitRepo, FileChange
 from gitmatrix.theme import DARK_QSS
@@ -36,6 +39,7 @@ class MainWindow(QMainWindow):
         self.setStyleSheet(DARK_QSS)
 
         self._repo: Optional[GitRepo] = None
+        self._current_commit = None
 
         # ------------------------------------------------------------------
         # Widgets centraux
@@ -66,29 +70,48 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(main_split)
 
         # ------------------------------------------------------------------
-        # Toolbar
+        # Toolbar — actions regroupées par catégorie
         # ------------------------------------------------------------------
         toolbar = QToolBar("Principal")
         toolbar.setMovable(False)
+        self._toolbar = toolbar
         self.addToolBar(toolbar)
-        toolbar.addAction("Ouvrir…", self._open_repo)
-        toolbar.addAction("Actualiser", self._refresh)
-        toolbar.addAction("Fetch", self._fetch)
-        toolbar.addAction("Pull", self._pull)
-        toolbar.addAction("Push", self._push)
-        toolbar.addSeparator()
-        toolbar.addAction("Stage All", self._stage_all)
-        toolbar.addAction("Unstage All", self._unstage_all)
-        toolbar.addSeparator()
-        act_commit = toolbar.addAction("Commit…", self._open_commit_dialog)
-        self._commit_action = act_commit
 
-        # Espace poussant le bouton About vers la droite
         spacer = QWidget()
         spacer.setSizePolicy(
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred
         )
+
+        # Groupe 1 : Fichier
+        act_open = toolbar.addAction("Ouvrir", self._open_repo)
+        self._set_shortcut(act_open, "Ctrl+O")
+        act_refresh = toolbar.addAction("Actualiser", self._refresh)
+        self._set_shortcut(act_refresh, "Ctrl+R")
         toolbar.addWidget(spacer)
+        act_commit = toolbar.addAction("Commit", self._open_commit_dialog)
+        self._commit_action = act_commit
+        b = toolbar.widgetForAction(act_commit)
+        if isinstance(b, QToolButton):
+            b.setObjectName("ActionCommit")
+            b.setToolTip("Créer un commit (Ctrl+Return)")
+            self._set_shortcut(act_commit, "Ctrl+Return")
+
+        # --- Séparateur puis groupe Sync ---
+        toolbar.addSeparator()
+        act_fetch = toolbar.addAction("Fetch", self._fetch)
+        act_pull = toolbar.addAction("Pull", self._pull)
+        act_push = toolbar.addAction("Push", self._push)
+        self._set_shortcut(act_push, "Ctrl+P")
+
+        # --- Groupe Staging ---
+        toolbar.addSeparator()
+        act_stage_all = toolbar.addAction("Stage All", self._stage_all)
+        act_unstage_all = toolbar.addAction("Unstage All", self._unstage_all)
+        self._mark_danger(act_unstage_all)
+        self._set_shortcut(act_stage_all, "Ctrl+S")
+
+        # --- Séparateur puis About (droite) ---
+        toolbar.addSeparator()
         toolbar.addAction("À propos", self._open_about)
 
         # ------------------------------------------------------------------
@@ -97,6 +120,11 @@ class MainWindow(QMainWindow):
         self.status = self.statusBar()
         self._status_label = QLabel()
         self.status.addWidget(self._status_label)
+
+        # ------------------------------------------------------------------
+        # État vide centralisé
+        # ------------------------------------------------------------------
+        self._build_empty_state()
 
         # ------------------------------------------------------------------
         # Connexions
@@ -109,7 +137,27 @@ class MainWindow(QMainWindow):
         self.files.unstage_all_requested.connect(self._unstage_all)
         self.branches.branch_checked.connect(self._checkout_branch)
 
+        # Désactiver les actions tant qu'aucun dépôt n'est ouvert
+        self._set_actions_enabled(False)
         self._update_status()
+
+    # ------------------------------------------------------------------
+    # Racourcis clavier
+    # ------------------------------------------------------------------
+    def _set_shortcut(self, action: QAction, seq: str) -> None:
+        sc = QShortcut(QKeySequence(seq), self)
+        sc.activated.connect(action.trigger)
+
+    def _mark_danger(self, action: QAction) -> None:
+        b = self._toolbar.widgetForAction(action)
+        if isinstance(b, QToolButton):
+            b.setObjectName("ActionDanger")
+
+    def _set_actions_enabled(self, enabled: bool) -> None:
+        for a in self._toolbar.actions():
+            if a.isSeparator():
+                continue
+            a.setEnabled(enabled)
 
     # ------------------------------------------------------------------
     # Constructeurs de panneaux
@@ -125,6 +173,45 @@ class MainWindow(QMainWindow):
         layout.addWidget(widget, 1)
         return container
 
+    def _build_empty_state(self) -> None:
+        """Superpose un écran d'accueil par-dessus le graphe tant qu'aucun dépôt."""
+        self._empty_container = QWidget(self.commit_graph)
+        lay = QVBoxLayout(self._empty_container)
+        lay.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        lay.setSpacing(10)
+
+        title = QLabel("Bienvenue dans GitMatrix")
+        title.setObjectName("EmptyStateTitle")
+        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        text = QLabel(
+            "Ouvrez un dépôt Git pour visualiser l'historique, "
+            "gérer les branches et effectuer des commits."
+        )
+        text.setObjectName("EmptyStateText")
+        text.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        text.setWordWrap(True)
+
+        btn = QPushButton("Ouvrir un dépôt…")
+        btn.setObjectName("EmptyOpen")
+        btn.clicked.connect(self._open_repo)
+
+        lay.addWidget(title)
+        lay.addWidget(text)
+        btn_wrap = QWidget()
+        hl = QHBoxLayout(btn_wrap)
+        hl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        hl.addWidget(btn)
+        lay.addWidget(btn_wrap)
+
+        self._empty_container.raise_()
+
+    def resizeEvent(self, event) -> None:  # noqa: N802
+        super().resizeEvent(event)
+        if hasattr(self, "_empty_container"):
+            self._empty_container.setGeometry(self.commit_graph.rect())
+            self._empty_container.raise_()
+
     # ------------------------------------------------------------------
     # Actions
     # ------------------------------------------------------------------
@@ -139,6 +226,9 @@ class MainWindow(QMainWindow):
             return
         self._repo = repo
         self.branches.set_repo(repo)
+        self._set_actions_enabled(True)
+        if hasattr(self, "_empty_container"):
+            self._empty_container.hide()
         self._refresh()
 
     def _refresh(self) -> None:
@@ -148,18 +238,42 @@ class MainWindow(QMainWindow):
             self.commit_graph.set_repo(self._repo)
             self.branches.refresh()
             self.files.set_changes(self._repo.changes())
+            # re-afficher le diff du commit sélectionné si présent
+            self._refresh_commit_detail()
         except GitMatrixError as exc:
             QMessageBox.warning(self, "Erreur", str(exc))
         self._update_status()
 
+    def _refresh_commit_detail(self) -> None:
+        if self._current_commit is not None:
+            self._show_commit_diff(self._current_commit)
+
     def _on_commit_selected(self, commit) -> None:
+        self._current_commit = commit
+        self._show_commit_diff(commit)
         self._update_status(commit=commit)
+
+    def _show_commit_diff(self, commit) -> None:
+        """Affiche le diff d'un commit (tous ses fichiers) dans le DiffViewer."""
+        if self._repo is None:
+            return
+        try:
+            diffs = self._repo.diff_commit(commit.hexsha)
+        except GitMatrixError as exc:
+            QMessageBox.warning(self, "Erreur", str(exc))
+            return
+        # Affiche le premier diff ; l'en-tête mentionne le nombre de fichiers
+        if diffs:
+            header = f"{commit.short_sha} · {len(diffs)} fichier(s) modifié(s)"
+            self.diff_viewer.show_diff(diffs[0], title=header)
+        else:
+            self.diff_viewer.show_diff(None, title=f"{commit.short_sha} · aucun changement")
 
     def _on_file_selected(self, file_change: FileChange) -> None:
         if self._repo is None:
             return
         diff = self._repo.diff(file_change.path)
-        self.diff_viewer.show_diff(diff)
+        self.diff_viewer.show_diff(diff, title=file_change.path)
 
     def _stage_file(self, file_change: FileChange) -> None:
         if self._repo is None:
@@ -193,6 +307,7 @@ class MainWindow(QMainWindow):
         if dialog.exec():
             try:
                 new_sha = self._repo.commit_all(dialog.message())
+                self._current_commit = self.commit_graph.selected_commit
                 self.commit_graph.select_commit(new_sha)
             except GitMatrixError as exc:
                 QMessageBox.critical(self, "Erreur", str(exc))
@@ -251,8 +366,11 @@ class MainWindow(QMainWindow):
         if self._repo is not None:
             branch = self._repo.active_branch or "(détaché)"
             parts.append(f"Branche : {branch}")
+            changes = self._repo.changes()
+            n_staged = sum(1 for c in changes if c.staged)
+            n_unstaged = sum(1 for c in changes if not c.staged)
             if self._repo.is_dirty():
-                parts.append("● modifications")
+                parts.append(f"● {n_staged}+ staged · {n_unstaged} unstaged")
         if commit is not None:
             parts.append(f"{commit.short_sha}  {commit.subject}")
         self._status_label.setText("   |   ".join(parts) if parts else "Aucun dépôt ouvert")

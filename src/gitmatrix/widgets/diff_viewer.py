@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import List, Optional
+from typing import Optional
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor, QTextCharFormat, QTextCursor, QFont
@@ -18,8 +18,14 @@ class DiffViewer(QPlainTextEdit):
         "add": QColor("#98c379"),
         "del": QColor("#e06c75"),
         "hunk": QColor("#61afef"),
-        "meta": QColor("#5c6470"),
+        "meta": QColor("#6b7381"),
         "ctx": QColor("#abb2bf"),
+    }
+    # fonds des bandes +/- / hunk
+    BG = {
+        "add": QColor("#1f3c2a"),
+        "del": QColor("#3d2226"),
+        "hunk": QColor("#1d2d44"),
     }
 
     def __init__(self, parent=None) -> None:
@@ -29,28 +35,39 @@ class DiffViewer(QPlainTextEdit):
         mono = QFont("Cascadia Mono")
         mono.setStyleHint(QFont.StyleHint.Monospace)
         mono.setPointSize(9)
+        mono.setLetterSpacing(QFont.SpacingType.AbsoluteSpacing, 0.2)
         self.setFont(mono)
-        self.document().setDefaultStyleSheet("")
         self.setPlaceholderText("Sélectionnez un fichier pour voir son diff.")
 
-    def show_diff(self, diff: Optional[FileDiff]) -> None:
+    def show_diff(self, diff: Optional[FileDiff], title: Optional[str] = None) -> None:
+        """Affiche un FileDiff ; ``title`` optionnel pour l'en-tête de fichier."""
         self.clear()
         if diff is None:
-            return
-        if not diff.hunks:
-            self.appendPlainText(
-                "(aucun contenu textuel à afficher — fichier binaire ou vide)"
-            )
             return
 
         cursor = self.textCursor()
         cursor.beginEditBlock()
-        for line in diff.hunks:
-            fmt = QTextCharFormat()
-            fmt.setForeground(self.COLORS.get(line["type"], self.COLORS["ctx"]))
-            if line["type"] in ("add", "del", "hunk"):
-                fmt.setFontWeight(QFont.Weight.DemiBold)
-            cursor.setCharFormat(fmt)
-            cursor.insertText(line["text"] + "\n")
+        self._line(cursor, f"━━ {title or diff.path} ━━", "meta")
+
+        if not diff.hunks:
+            self._line(cursor, "", "ctx")
+            self._line(
+                cursor,
+                "(aucun contenu textuel à afficher — fichier binaire ou vide)",
+                "meta",
+            )
+        else:
+            for line in diff.hunks:
+                self._line(cursor, line["text"], line["type"])
         cursor.endEditBlock()
         self.setTextCursor(QTextCursor(self.document()))
+
+    def _line(self, cursor: QTextCursor, text: str, kind: str) -> None:
+        """Insère une ligne avec couleur + éventuel fond de bande."""
+        fmt = QTextCharFormat()
+        fmt.setForeground(self.COLORS.get(kind, self.COLORS["ctx"]))
+        if kind in ("add", "del", "hunk"):
+            fmt.setFontWeight(QFont.Weight.DemiBold)
+            fmt.setBackground(self.BG[kind])
+        cursor.setCharFormat(fmt)
+        cursor.insertText(text + "\n")

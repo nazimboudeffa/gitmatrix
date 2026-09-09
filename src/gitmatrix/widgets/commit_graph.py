@@ -12,7 +12,7 @@ from PySide6.QtGui import (
     QPainterPath,
     QPen,
 )
-from PySide6.QtWidgets import QAbstractScrollArea
+from PySide6.QtWidgets import QAbstractScrollArea, QToolTip
 
 from gitmatrix.core.git_repo import CommitInfo, GitRepo, RefInfo
 from gitmatrix.models.graph import GraphLayout, GraphNode
@@ -20,7 +20,8 @@ from gitmatrix.models.graph import GraphLayout, GraphNode
 ROW_HEIGHT = 30
 COLUMN_WIDTH = 22
 LEFT_PADDING = 16
-NODE_RADIUS = 6
+NODE_RADIUS = 8  # agrandi (6 → 8) pour une meilleure visée
+SELECT_RING = 5  # anneau de sélection autour du nœud
 COLOR_PALETTE = [
     "#e06c75",  # rouge
     "#61afef",  # bleu
@@ -83,12 +84,22 @@ class CommitGraphWidget(QAbstractScrollArea):
                 return e.commit
         return None
 
+    @property
+    def hovered_commit(self) -> Optional[CommitInfo]:
+        if self._hovered_sha is None or not self._entries:
+            return None
+        for e in self._entries:
+            if e.commit.hexsha == self._hovered_sha:
+                return e.commit
+        return None
+
     # ------------------------------------------------------------------
     # Chargement
     # ------------------------------------------------------------------
     def _reload(self) -> None:
         self._entries = []
         self._row_index = {}
+        self._hovered_sha = None
         if self._repo is None:
             self._update_geometry()
             return
@@ -182,7 +193,7 @@ class CommitGraphWidget(QAbstractScrollArea):
             painter.drawText(
                 self.viewport().rect(),
                 Qt.AlignmentFlag.AlignCenter,
-                "Ouvrez un dépôt Git pour afficher l'historique.",
+                "Aucun commit à afficher.",
             )
             return
 
@@ -243,20 +254,43 @@ class CommitGraphWidget(QAbstractScrollArea):
         x = (entry.column + 1) * COLUMN_WIDTH
         color = self._color_of(entry)
 
+        # Anneau de sélection (or)
         if entry.commit.hexsha == self._selected_sha:
             painter.setPen(QPen(QColor("#e5c07b"), 2))
             painter.setBrush(Qt.BrushStyle.NoBrush)
             painter.drawEllipse(
-                QRectF(x - NODE_RADIUS - 5, y - NODE_RADIUS - 5,
-                       (NODE_RADIUS + 5) * 2, (NODE_RADIUS + 5) * 2)
+                QRectF(
+                    x - NODE_RADIUS - SELECT_RING,
+                    y - NODE_RADIUS - SELECT_RING,
+                    (NODE_RADIUS + SELECT_RING) * 2,
+                    (NODE_RADIUS + SELECT_RING) * 2,
+                )
+            )
+
+        # Halo du survol (fond légèrement plus clair)
+        if entry.commit.hexsha == self._hovered_sha and entry.commit.hexsha != self._selected_sha:
+            painter.setPen(QPen(color.lighter(125), 1.5))
+            painter.setBrush(Qt.BrushStyle.NoBrush)
+            painter.drawEllipse(
+                QRectF(
+                    x - NODE_RADIUS - SELECT_RING - 1,
+                    y - NODE_RADIUS - SELECT_RING - 1,
+                    (NODE_RADIUS + SELECT_RING + 1) * 2,
+                    (NODE_RADIUS + SELECT_RING + 1) * 2,
+                )
             )
 
         painter.setPen(QPen(color, 2))
         painter.setBrush(color.darker(140))
         painter.drawEllipse(
-            QRectF(x - NODE_RADIUS, y - NODE_RADIUS,
-                   NODE_RADIUS * 2, NODE_RADIUS * 2)
+            QRectF(x - NODE_RADIUS, y - NODE_RADIUS, NODE_RADIUS * 2, NODE_RADIUS * 2)
         )
+
+        # point central
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.setBrush(color)
+        inner = max(2, NODE_RADIUS - 3)
+        painter.drawEllipse(QRectF(x - inner, y - inner, inner * 2, inner * 2))
 
         text_x = x + NODE_RADIUS + 8
         if text_x > self._content_width:
@@ -300,7 +334,9 @@ class CommitGraphWidget(QAbstractScrollArea):
         }
 
         offset = 0.0
-        label_x = x0 + 250
+        # Position des badges positionnée dynamiquement, après le texte du commit
+        subject_w = painter.fontMetrics().horizontalAdvance(entry.commit.subject or "")
+        label_x = x0 + min(subject_w + 60, 560)
         for ref in entry.refs:
             bg = bg_map.get(ref.kind, QColor("#5c6470"))
             fg = fg_map.get(ref.kind, QColor("#ffffff"))
@@ -348,6 +384,36 @@ class CommitGraphWidget(QAbstractScrollArea):
         return None
 
     # ------------------------------------------------------------------
+    # Tooltip
+    # ------------------------------------------------------------------
+    def _show_tooltip(self, sha: str) -> None:
+        commit = self._find_commit(sha)
+        if commit is None:
+            return
+        refs = ""
+        for e in self._entries:
+            if e.commit.hexsha == sha:
+                labels = [
+                    "HEAD" if r.kind == "head" else r.name for r in e.refs
+                ]
+                refs = f"  [{', '.join(labels)}]" if labels else ""
+                break
+        lines = [
+            f"{commit.subject}",
+            f"   {commit.author_name}  ·  {self._format_date(commit)}",
+            f"   {commit.short_sha}{refs}",
+        ]
+        if len(commit.message) > len(commit.subject):
+            extra = commit.message[len(commit.subject) :].strip()
+            if extra:
+                lines.append("   " + extra.replace("\n", "\n   "))
+        QToolTip.showText(
+            self.viewport().mapToGlobal(self.viewport().rect().center()),
+            "\n".join(lines),
+            self,
+        )
+
+    # ------------------------------------------------------------------
     # Événements
     # ------------------------------------------------------------------
     def resizeEvent(self, event) -> None:  # noqa: N802
@@ -383,7 +449,17 @@ class CommitGraphWidget(QAbstractScrollArea):
         if sha != self._hovered_sha:
             self._hovered_sha = sha
             self.viewport().update()
+            if sha is not None:
+                self._show_tooltip(sha)
+            else:
+                QToolTip.hideText()
         super().mouseMoveEvent(event)
+
+    def leaveEvent(self, event) -> None:  # noqa: N802
+        self._hovered_sha = None
+        QToolTip.hideText()
+        self.viewport().update()
+        super().leaveEvent(event)
 
     def _update_scrollbars(self) -> None:
         self.verticalScrollBar().setRange(0, max(0, self._content_height - self.viewport().height()))

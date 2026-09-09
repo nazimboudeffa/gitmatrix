@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import List, Optional
 
 from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QColor, QBrush
+from PySide6.QtGui import QColor, QBrush, QFont
 from PySide6.QtWidgets import QTreeWidget, QTreeWidgetItem, QMenu, QHeaderView
 
 from gitmatrix.core.git_repo import FileChange
@@ -20,9 +20,18 @@ class FileListWidget(QTreeWidget):
     stage_all_requested = Signal()
     unstage_all_requested = Signal()
 
+    STATUS_STYLE = {
+        "U": ("#d19a66", "?"),
+        "A": ("#98c379", "A"),
+        "M": ("#d19a66", "M"),
+        "D": ("#e06c75", "D"),
+        "R": ("#61afef", "R"),
+        "C": ("#61afef", "C"),
+    }
+
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
-        self.setHeaderLabels(["Fichier", "État"])
+        self.setHeaderLabels(["Fichier", ""])
         self.header().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
         self.header().setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
@@ -37,13 +46,19 @@ class FileListWidget(QTreeWidget):
         self._root_staged = QTreeWidgetItem(["Staged"])
         self._root_unstaged = QTreeWidgetItem(["Changes"])
         for c in changes:
-            item = QTreeWidgetItem([c.path, c.status])
-            if c.status == "U":
-                item.setForeground(1, QBrush(QColor("#d19a66")))
-            elif c.staged:
-                item.setForeground(1, QBrush(QColor("#98c379")))
-            else:
-                item.setForeground(1, QBrush(QColor("#e06c75")))
+            item = QTreeWidgetItem([c.path, ""])
+            color, letter = self.STATUS_STYLE.get(
+                c.status, ("#d7dae0", c.status or "?")
+            )
+            # Pastille de statut : lettre colorée en gras (colonne 1)
+            item.setForeground(1, QBrush(QColor(color)))
+            status_font = QFont(self.font())
+            status_font.setBold(True)
+            item.setFont(1, status_font)
+            item.setText(1, letter)
+            # Le nom de fichier : légère teinte selon staged/unstaged
+            name_color = "#98c379" if c.staged else "#e06c75"
+            item.setForeground(0, QBrush(QColor(name_color)))
             item.setData(0, Qt.ItemDataRole.UserRole, c)
             (self._root_staged if c.staged else self._root_unstaged).addChild(item)
         self.addTopLevelItem(self._root_staged)

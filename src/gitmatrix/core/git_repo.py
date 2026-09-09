@@ -217,6 +217,7 @@ class GitRepo:
                     seen.add(r.name)
                     result.append(r)
         return result
+
     def changes(self) -> List[FileChange]:
         """Liste des changements (staged + unstaged + untracked).
 
@@ -294,6 +295,34 @@ class GitRepo:
             is_deleted=bool(d.deleted_file),
             hunks=_parse_diff(raw),
         )
+
+    def diff_commit(self, hexsha: str) -> list:
+        """Diff complet d'un commit (le commit vs son premier parent).
+
+        Renvoie la liste des ``FileDiff`` des fichiers modifiés par ce commit.
+        Utilisé par la sélection d'un commit dans le graphe.
+        """
+        try:
+            commit = self._repo.commit(hexsha)
+            parent = commit.parents[0] if commit.parents else None
+            diffs = commit.diff(parent, create_patch=True)
+        except Exception as exc:
+            raise GitMatrixError(f"Impossible de lire le diff du commit : {exc}")
+
+        result: List[FileDiff] = []
+        for d in diffs:
+            raw = d.diff
+            if isinstance(raw, bytes):
+                raw = raw.decode("utf-8", errors="replace")
+            result.append(
+                FileDiff(
+                    path=d.b_path or d.a_path or "?",
+                    is_new=bool(d.new_file),
+                    is_deleted=bool(d.deleted_file),
+                    hunks=_parse_diff(raw),
+                )
+            )
+        return result
 
     # ------------------------------------------------------------------
     # Actions
