@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import List, Optional
 
-from PySide6.QtCore import QPointF, QRectF, Qt, Signal
+from PySide6.QtCore import QPoint, QPointF, QRectF, Qt, Signal
 from PySide6.QtGui import (
     QColor,
     QFont,
@@ -375,7 +375,7 @@ class CommitGraphWidget(QAbstractScrollArea):
     # ------------------------------------------------------------------
     # Tooltip
     # ------------------------------------------------------------------
-    def _show_tooltip(self, sha: str) -> None:
+    def _show_tooltip(self, sha: str, global_pos=None) -> None:
         commit = self._find_commit(sha)
         if commit is None:
             return
@@ -396,11 +396,11 @@ class CommitGraphWidget(QAbstractScrollArea):
             extra = commit.message[len(commit.subject) :].strip()
             if extra:
                 lines.append("   " + extra.replace("\n", "\n   "))
-        QToolTip.showText(
-            self.viewport().mapToGlobal(self.viewport().rect().center()),
-            "\n".join(lines),
-            self,
+        # Position : sous le curseur (commit survolé), jamais centré
+        pos = global_pos or self.viewport().mapToGlobal(
+            QPoint(self.viewport().width() // 2, 0)
         )
+        QToolTip.showText(pos, "\n".join(lines), self)
 
     # ------------------------------------------------------------------
     # Événements
@@ -439,7 +439,7 @@ class CommitGraphWidget(QAbstractScrollArea):
             self._hovered_sha = sha
             self.viewport().update()
             if sha is not None:
-                self._show_tooltip(sha)
+                self._show_tooltip(sha, event.globalPosition().toPoint())
             else:
                 QToolTip.hideText()
         super().mouseMoveEvent(event)
