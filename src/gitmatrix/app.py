@@ -29,14 +29,7 @@ def main(argv=None) -> int:
 
     target = args.repo or (os.getcwd() if os.path.isdir(".git") else None)
     if target is not None:
-        from gitmatrix.core.git_repo import GitRepo, GitMatrixError
-
-        try:
-            window._repo = GitRepo(target)
-            window.branches.set_repo(window._repo)
-            window._refresh()
-        except GitMatrixError:
-            pass
+        window.load_repo(target)
 
     return app.exec()
 

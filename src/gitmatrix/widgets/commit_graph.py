@@ -16,24 +16,13 @@ from PySide6.QtWidgets import QAbstractScrollArea, QToolTip
 
 from gitmatrix.core.git_repo import CommitInfo, GitRepo, RefInfo
 from gitmatrix.models.graph import GraphLayout, GraphNode
+from gitmatrix.theme import COLOR_PALETTE
 
 ROW_HEIGHT = 30
 COLUMN_WIDTH = 22
 LEFT_PADDING = 16
 NODE_RADIUS = 8  # agrandi (6 → 8) pour une meilleure visée
 SELECT_RING = 5  # anneau de sélection autour du nœud
-COLOR_PALETTE = [
-    "#e06c75",  # rouge
-    "#61afef",  # bleu
-    "#98c379",  # vert
-    "#e5c07b",  # jaune
-    "#c678dd",  # violet
-    "#56b6c2",  # cyan
-    "#d19a66",  # orange
-    "#ff7eb6",  # rose
-    "#6c8cff",  # indigo
-    "#7bd88f",  # vert clair
-]
 
 
 class CommitGraphWidget(QAbstractScrollArea):

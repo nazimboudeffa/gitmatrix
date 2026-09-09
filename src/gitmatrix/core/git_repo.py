@@ -7,6 +7,7 @@ l'interface (UI) reste complètement découplée des détails de Git.
 from __future__ import annotations
 
 import collections
+import os
 from dataclasses import dataclass, field
 from typing import List, Optional
 
@@ -240,8 +241,10 @@ class GitRepo:
             if not rec:
                 continue
             st, path = rec[:2], rec[2:]
+            # porcelain v1 sépare le statut (XY) du chemin par un espace
+            if path.startswith(" "):
+                path = path[1:]
             if "R" in st and i < len(records) and records[i]:
-                path = records[i]
                 i += 1
             x, y = st[0], st[1]
             if st == "??":
@@ -270,17 +273,37 @@ class GitRepo:
     def diff(self, path: str) -> FileDiff:
         """Diff d'un fichier (working tree vs HEAD si staged, sinon vs index)."""
         try:
-            diffs = list(self._repo.index.diff(None, paths=[path]))
+            diffs = list(
+                self._repo.index.diff(None, paths=[path], create_patch=True)
+            )
             is_staged = False
         except Exception:
             diffs = []
             is_staged = True
         if not diffs:
             try:
-                diffs = list(self._repo.index.diff("HEAD", paths=[path]))
+                diffs = list(
+                    self._repo.index.diff("HEAD", paths=[path], create_patch=True)
+                )
                 is_staged = True
             except Exception:
                 diffs = []
+
+        if not diffs:
+            # fichier non suivi (untracked) : on affiche son contenu en additions
+            full = os.path.join(self.path, path)
+            if os.path.isfile(full):
+                try:
+                    with open(full, "r", encoding="utf-8", errors="replace") as fh:
+                        content = fh.read()
+                except OSError:
+                    content = ""
+                hunks = [
+                    {"text": line, "type": "add", "new_line": i + 1}
+                    for i, line in enumerate(content.rstrip("\r\n").splitlines())
+                ]
+                return FileDiff(path=path, is_new=True, is_deleted=False, hunks=hunks)
+            return FileDiff(path=path, is_new=False, is_deleted=False)
 
         if not diffs:
             return FileDiff(path=path, is_new=False, is_deleted=False)
@@ -324,6 +347,28 @@ class GitRepo:
             )
         return result
 
+    def diff_commit_file(self, hexsha: str, path: str) -> FileDiff:
+        """Diff d'un SEUL fichier à l'intérieur d'un commit donné."""
+        try:
+            commit = self._repo.commit(hexsha)
+            parent = commit.parents[0] if commit.parents else None
+            diffs = commit.diff(parent, create_patch=True, paths=[path])
+            if not diffs:
+                return FileDiff(path=path, is_new=False, is_deleted=False)
+            d = diffs[0]
+            raw = d.diff
+            if isinstance(raw, bytes):
+                raw = raw.decode("utf-8", errors="replace")
+            return FileDiff(
+                path=d.b_path or d.a_path or path,
+                is_new=bool(d.new_file),
+                is_deleted=bool(d.deleted_file),
+                hunks=_parse_diff(raw),
+            )
+        except GitMatrixError:
+            raise
+        except Exception as exc:
+            raise GitMatrixError(f"Impossible de lire le diff du fichier : {exc}")
     # ------------------------------------------------------------------
     # Actions
     # ------------------------------------------------------------------

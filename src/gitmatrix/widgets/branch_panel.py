@@ -2,11 +2,33 @@
 
 from __future__ import annotations
 
-from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QColor, QBrush, QFont
-from PySide6.QtWidgets import QListWidget, QListWidgetItem, QMenu, QInputDialog, QMessageBox
+from PySide6.QtCore import Qt, QSize, Signal
+from PySide6.QtGui import QColor, QPainter, QPixmap, QFont
+from PySide6.QtWidgets import (
+    QListWidget,
+    QListWidgetItem,
+    QMenu,
+    QInputDialog,
+    QMessageBox,
+    QWidget,
+    QHBoxLayout,
+    QLabel,
+)
 
 from gitmatrix.core.git_repo import RefInfo, GitMatrixError
+from gitmatrix.theme import COLOR_PALETTE, ACCENT
+
+
+def _dot_icon(color: str, size: int = 8) -> QPixmap:
+    pm = QPixmap(size, size)
+    pm.fill(Qt.GlobalColor.transparent)
+    p = QPainter(pm)
+    p.setRenderHint(QPainter.RenderHint.Antialiasing)
+    p.setPen(Qt.PenStyle.NoPen)
+    p.setBrush(QColor(color))
+    p.drawEllipse(0, 0, size, size)
+    p.end()
+    return pm
 
 
 class BranchPanel(QListWidget):
@@ -34,44 +56,80 @@ class BranchPanel(QListWidget):
         if self._repo is None:
             return
         active = self._repo.active_branch
-        for b in self._repo.all_branches():
-            item = QListWidgetItem(b.name)
-            item.setData(Qt.ItemDataRole.UserRole, b)
-            if b.name == active:
-                # Branche active : fond doré discret + texte accent + gras
-                item.setForeground(QBrush(QColor("#e5c07b")))
-                font = QFont(self.font())
-                font.setBold(True)
-                item.setFont(font)
-                item.setBackground(QBrush(QColor("#2a2e26")))
-                item.setText(f"{b.name}  ★")
-            status = self._repo.upstream_status(b.name)
-            if status is not None:
-                ahead, behind = status
-                parts = " ".join(
-                    p
-                    for p in (
-                        f"↑{ahead}" if ahead else "",
-                        f"↓{behind}" if behind else "",
-                    )
-                    if p
-                )
-                if parts:
-                    item.setText(f"{item.text()}  {parts}".strip())
-            self.addItem(item)
+        for i, b in enumerate(self._repo.all_branches()):
+            is_active = b.name == active
+            dot = ACCENT if is_active else COLOR_PALETTE[i % len(COLOR_PALETTE)]
+            self._add_branch(b, dot, is_active)
 
         # Branches distantes (affichage seul, non modifiables)
         remotes = self._repo.all_remote_branches()
         if remotes:
-            sep = QListWidgetItem("Distantes")
+            sep = QListWidgetItem("DISTANTES")
             sep.setFlags(Qt.ItemFlag.NoItemFlags)
-            sep.setForeground(QBrush(QColor("#7b61b8")))
+            sep.setForeground(QColor("#7b61b8"))
+            f = QFont(self.font())
+            f.setPointSize(9)
+            f.setBold(True)
+            sep.setFont(f)
             self.addItem(sep)
-            for r in remotes:
-                item = QListWidgetItem(r.name)
+            for r in sorted(remotes, key=lambda x: x.name):
+                item = QListWidgetItem()
                 item.setData(Qt.ItemDataRole.UserRole, r)
-                item.setForeground(QBrush(QColor("#b9b4d6")))
+                row = self._row_widget(r.name, "#7b61b8", False, None)
+                item.setSizeHint(row.sizeHint())
                 self.addItem(item)
+                self.setItemWidget(item, row)
+
+    def _add_branch(self, b: RefInfo, dot: str, is_active: bool) -> None:
+        item = QListWidgetItem()
+        item.setData(Qt.ItemDataRole.UserRole, b)
+        status = self._repo.upstream_status(b.name)
+        row = self._row_widget(
+            b.name,
+            dot,
+            is_active,
+            status if not is_active else None,
+        )
+        item.setSizeHint(row.sizeHint())
+        self.addItem(item)
+        self.setItemWidget(item, row)
+
+    @staticmethod
+    def _row_widget(name: str, dot: str, active: bool, status):
+        w = QWidget()
+        lay = QHBoxLayout(w)
+        lay.setContentsMargins(12, 4, 14, 4)
+        lay.setSpacing(8)
+
+        dot_lbl = QLabel()
+        dot_lbl.setFixedSize(8, 8)
+        dot_lbl.setPixmap(_dot_icon(dot, 8))
+        lay.addWidget(dot_lbl)
+
+        name_lbl = QLabel(name)
+        if active:
+            name_lbl.setStyleSheet(
+                f"color:{ACCENT}; font-weight:600; background:transparent;"
+            )
+        lay.addWidget(name_lbl)
+
+        if status is not None:
+            ahead, behind = status
+            stat = QHBoxLayout()
+            stat.setSpacing(4)
+            if ahead:
+                a = QLabel(f"↑{ahead}")
+                a.setStyleSheet("color:#98c379; background:transparent;")
+                stat.addWidget(a)
+            if behind:
+                b = QLabel(f"↓{behind}")
+                b.setStyleSheet("color:#e06c75; background:transparent;")
+                stat.addWidget(b)
+            lay.addLayout(stat)
+
+        stretch = QLabel()
+        lay.addWidget(stretch, 1)
+        return w
 
     def _show_menu(self, pos) -> None:
         item = self.itemAt(pos)

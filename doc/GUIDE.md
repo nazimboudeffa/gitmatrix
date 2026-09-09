@@ -135,17 +135,20 @@ python -m gitmatrix -r chemin\vers\mon\repo
 
 ### 2.3 Barre d'outils
 
-| Bouton        | Effet |
-| ------------- | ----- |
-| Ouvrir…       | Ouvre un dépôt |
-| Actualiser    | Recharge graphe + changements |
-| Fetch         | Récupère les branches de tous les remotes |
-| Pull          | Récupère et fusionne les changements du remote |
-| Push          | Pousse la branche active (crée l'upstream si besoin) |
-| Stage All     | Indexe tous les changements |
-| Unstage All   | Dé-indexe tout |
-| Commit…       | Ouvre la fenêtre de commit |
-| À propos      | Info + lien de soutien |
+| Bouton        | Raccourci    | Effet |
+| ------------- | ------------ | ----- |
+| Ouvrir        | Ctrl+O       | Ouvre un dépôt |
+| Actualiser    | Ctrl+R       | Recharge graphe + changements |
+| Fetch         | —            | Récupère les branches de tous les remotes |
+| Pull          | —            | Récupère et fusionne les changements du remote |
+| Push          | Ctrl+P       | Pousse la branche active (crée l'upstream si besoin) |
+| Stage All     | Ctrl+S       | Indexe tous les changements |
+| Unstage All   | —            | Dé-indexe tout |
+| Commit        | Ctrl+Retour  | Ouvre la fenêtre de commit |
+| À propos      | —            | Info + lien de soutien |
+
+> La barre d'outils regroupe les actions par catégorie (fichier, synchronisation,
+> staging) avec icônes ; **Commit** est le bouton principal à droite.
 
 ### 2.4 Le workflow typique
 
@@ -155,7 +158,11 @@ python -m gitmatrix -r chemin\vers\mon\repo
 4. Cliquez-droit sur un fichier → **Stage** (ou passez la souris sur **Stage All**).
 5. Cliquez **Commit…**, écrivez un message, validez.
 6. Le nouveau commit apparaît dans le **graphe**.
-7. Dans le graphe, cliquez un commit pour l'afficher dans la barre d'état.
+7. Dans le graphe, **cliquez** un commit pour voir le diff qu'il a introduit,
+   **double-cliquez** pour lister les fichiers modifiés par ce commit dans le
+   panneau *Modifications* (un clic sur un de ces fichiers affiche son diff).
+8. La **barre d'état** montre en permanence la branche active, le dépôt est-il
+   modifié, et les nombres *staged* / *unstaged*.
 
 ### 2.5 Gérer les branches
 
@@ -164,7 +171,9 @@ Dans le panneau de gauche :
 - **double-clic** → basculer (checkout) ;
 - **clic droit** → créer une branche, la supprimer, ou basculer dessus.
 
-La branche active est en **jaune avec une ★**.
+La branche active est en **doré** ; chaque branche porte une pastille de couleur
+et son éventuel état amont **↑** (à pousser) / **↓** (à tirer). Les branches
+distantes (`origin/…`) sont regroupées sous *DISTANTES* en violet.
 
 ### 2.6 Les erreurs
 

@@ -1,4 +1,30 @@
-"""Thème sombre global de GitMatrix (QSS)."""
+"""Thème sombre global de GitMatrix (QSS).
+
+Basé sur la spec ``doc/brand-spec.md`` : fond anthracite #1e2127,
+surface #22252b, accent doré #e5c07b, textes #d7dae0 / #9da5b4.
+"""
+
+# Palette de BASE de l'interface — réutilisée par les widgets.
+BG = "#1e2127"
+SURFACE = "#22252b"
+FG = "#d7dae0"
+MUTED = "#9da5b4"
+BORDER = "#3a3f46"
+ACCENT = "#e5c07b"
+
+# Palette de couleurs PAR BRANCHE (distincte de l'accent, cf. brand-spec).
+COLOR_PALETTE = [
+    "#e06c75",  # rouge
+    "#61afef",  # bleu
+    "#98c379",  # vert
+    "#e5c07b",  # jaune
+    "#c678dd",  # violet
+    "#56b6c2",  # cyan
+    "#d19a66",  # orange
+    "#ff7eb6",  # rose
+    "#6c8cff",  # indigo
+    "#7bd88f",  # vert clair
+]
 
 DARK_QSS = """
 QMainWindow, QWidget {
@@ -148,16 +174,6 @@ QLabel#PanelTitle {
     letter-spacing: 0.03em;
 }
 
-QLabel#EmptyStateTitle {
-    font-size: 18px;
-    font-weight: 600;
-    color: #ffffff;
-}
-QLabel#EmptyStateText {
-    color: #9da5b4;
-    font-size: 13px;
-}
-
 QMenu {
     background-color: #22252b;
     border: 1px solid #3a3f46;
@@ -198,5 +214,57 @@ QToolTip {
     color: #d7dae0;
     border: 1px solid #3a3f46;
     padding: 6px 10px;
+}
+
+/* En-tête de panneau mono majuscules (façon maquette) */
+QLabel#PanelHeaderMono {
+    font-family: "Cascadia Mono", "JetBrains Mono", "Consolas", monospace;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #9da5b4;
+    background-color: transparent;
+    border: none;
+    padding: 10px 14px 8px;
+    border-bottom: 1px solid #2f333b;
+}
+
+/* Compteur dans un en-tête (pastille arrondie) */
+QLabel#HeaderCount {
+    background-color: #2d3138;
+    color: #9da5b4;
+    border-radius: 8px;
+    padding: 1px 7px;
+    font-size: 10px;
+    font-family: "Cascadia Mono", "JetBrains Mono", "Consolas", monospace;
+}
+
+/* Status bar : texte principal */
+QStatusBar QLabel#StatusBarText {
+    color: #9da5b4;
+    font-size: 12px;
+    background-color: transparent;
+}
+
+/* Status bar : chip (branche / staged / unstaged) */
+QLabel#StatusChip {
+    background-color: #262a31;
+    border: 1px solid #343941;
+    border-radius: 10px;
+    padding: 2px 10px;
+    font-size: 11px;
+}
+QLabel#StatusChip[chip="branch"] {
+    color: #e5c07b;
+    font-weight: 600;
+}
+QLabel#StatusChip[chip="dirty"] {
+    color: #d19a66;
+}
+
+/* Pastille ronde dans les chips de la status bar */
+QLabel#StatusDot {
+    background-color: transparent;
 }
 """
