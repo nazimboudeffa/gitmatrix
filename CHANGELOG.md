@@ -2,6 +2,31 @@
 
 Toutes les modifications notables de GitMatrix sont documentées ici.
 
+## v0.3.1 — 2026-09-10
+
+**Thèmes et splash screens configurables**
+
+- Thèmes chargés en JSON depuis `assets/themes` + `~/.gitmatrix/themes` :
+  tokens + palette, template QSS généré, override complet, application à chaud
+- 3 thèmes prédéfinis : **Nightfall** (défaut), **Matrix Void**, **Daylight**
+- Splash screens configurés en JSON depuis `assets/splashscreens` +
+  `~/.gitmatrix/splashscreens` : couleurs, charset, densité, vitesse, message
+- 3 splash prédéfinis : **Matrix Rain** (défaut), **Gold Rain**, **Minimal**
+- Aperçu du splash en plein écran depuis les paramètres, sans redémarrer
+  (fenêtre de paramètres non-modale)
+- Option « Activer le splash au démarrage » (persistée via `QSettings`)
+- Message intégré au splash qui se « décrypte » cellule par cellule
+
+**Interface en anglais**
+
+- Interface complète traduite en anglais (unilingue) ; le français reste
+  réservé aux documents et aux commentaires du code
+
+**Divers**
+
+- Numéro de version centralisé dans `src/gitmatrix/__init__.py` (une seule
+  source ; `pyproject.toml` la lit dynamiquement)
+
 ## v0.3.0 — 2026-09-09
 
 **Toolbar repensée (maquette v2)**
