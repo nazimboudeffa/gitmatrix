@@ -1,9 +1,9 @@
 [project]
 name = "gitmatrix"
-version = "0.3.0"
 description = "Un client Git visuel et léger"
 readme = "README.md"
 requires-python = ">=3.9"
+dynamic = ["version"]
 dependencies = [
     "PySide6>=6.5.0",
     "GitPython>=3.1.30",
@@ -23,6 +23,9 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.dynamic]
+version = {attr = "gitmatrix.__version__"}
 
 [tool.setuptools.package-data]
 gitmatrix = ["*.qss"]
