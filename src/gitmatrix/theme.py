@@ -86,6 +86,19 @@ QToolBar QToolButton#ActionBranch {
 QToolBar QToolButton#ActionBranch:hover {
     border-color: #9da5b4;
 }
+
+/* Bouton Settings (menu déroulant engrenage) à droite de la toolbar */
+QToolBar QToolButton#ActionSettings {
+    color: #d7dae0;
+    font-weight: 500;
+}
+QToolBar QToolButton#ActionSettings:hover {
+    background-color: #2d3138;
+    border-color: #3a3f46;
+}
+QToolBar QToolButton#ActionSettings:pressed {
+    background-color: #262a31;
+}
 QToolBar QToolButton::menu-indicator {
     image: none;
 }

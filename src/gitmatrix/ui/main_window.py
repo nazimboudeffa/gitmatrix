@@ -31,6 +31,7 @@ from gitmatrix.widgets.branch_panel import BranchPanel
 from gitmatrix.ui.commit_dialog import CommitDialog
 from gitmatrix.ui.about_dialog import AboutDialog
 from gitmatrix.ui.clone_dialog import CloneDialog
+from gitmatrix.ui.settings_dialog import SettingsDialog
 
 _ICONS = Path(__file__).resolve().parent.parent / "assets" / "icons"
 
@@ -141,9 +142,10 @@ class MainWindow(QMainWindow):
         # Espaceur droit : équilibre le bloc central
         toolbar.addWidget(self._stretch())
 
-        # Groupe 7 : À propos (à droite, seul)
-        act_about = toolbar.addAction(_icon("about"), "À propos", self._open_about)
-        self._actions_to_keep = {act_about, act_clone}
+        # Groupe 7 : Paramètres (à droite) — menu déroulant engrenage
+        self._settings_btn = self._make_settings_button()
+        toolbar.addWidget(self._settings_btn)
+        self._actions_to_keep = {act_clone}
 
         # ------------------------------------------------------------------
         # Status bar — chips (branche / dirty) + infos droites (staged/unstaged)
@@ -209,6 +211,28 @@ class MainWindow(QMainWindow):
         btn.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
         btn.setMenu(QMenu(self))
         btn.setEnabled(False)
+        return btn
+
+    def _make_settings_button(self) -> QToolButton:
+        btn = QToolButton()
+        btn.setObjectName("ActionSettings")
+        btn.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextUnderIcon)
+        btn.setIconSize(QSize(15, 15))
+        btn.setIcon(_icon("settings"))
+        btn.setText("Settings")
+        btn.setToolTip("Paramètres et informations")
+        btn.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
+        menu = QMenu(self)
+
+        act_settings = menu.addAction(_icon("settings"), "Paramètres du logiciel…")
+        act_settings.triggered.connect(self._open_settings)
+
+        menu.addSeparator()
+
+        act_about = menu.addAction(_icon("about"), "À propos")
+        act_about.triggered.connect(self._open_about)
+
+        btn.setMenu(menu)
         return btn
 
     def _refresh_branch_menu(self) -> None:
@@ -474,6 +498,9 @@ class MainWindow(QMainWindow):
 
     def _open_about(self) -> None:
         AboutDialog(self).exec()
+
+    def _open_settings(self) -> None:
+        SettingsDialog(self).exec()
 
     def _update_status(self, commit=None) -> None:
         if self._repo is None:
