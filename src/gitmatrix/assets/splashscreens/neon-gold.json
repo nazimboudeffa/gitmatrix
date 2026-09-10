@@ -1,7 +1,7 @@
 {
   "name": "Gold Rain",
   "background": "#120f08",
-  "char_set": "hex",
+  "char_set": "0123456789ABCDEF",
   "head_color": "#e5c07b",
   "body_color": "#a08040",
   "title": "GitMatrix",

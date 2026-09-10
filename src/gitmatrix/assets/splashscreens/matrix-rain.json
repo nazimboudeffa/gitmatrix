@@ -1,7 +1,7 @@
 {
   "name": "Matrix Rain",
   "background": "#0d0d0d",
-"char_set": "katakana",
+"char_set": "ア イ ウ エ オ カ キ ク ケ コ サ シ ス セ ソ タ チ ツ テ ト ナ ニ ヌ ネ ノ ハ ヒ フ ヘ ホ マ ミ ム メ モ ヤ ユ ヨ ラ リ ル レ ロ ワ ヰ ヱ ヲ ン ァ ィ ァ ェ ォ ッ",
   "head_color": "#00ff41",
   "body_color": "#00c832",
   "title": "GitMatrix",

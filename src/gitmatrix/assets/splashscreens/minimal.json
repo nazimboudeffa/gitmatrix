@@ -1,7 +1,7 @@
 {
   "name": "Minimal",
   "background": "#1e2127",
-  "char_set": "latin",
+  "char_set": "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ",
   "head_color": "#61afef",
   "body_color": "#2d4f6f",
   "title": "GitMatrix",

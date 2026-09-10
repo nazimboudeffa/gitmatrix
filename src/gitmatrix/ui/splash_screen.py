@@ -11,25 +11,13 @@ from __future__ import annotations
 
 import json
 import random
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import List, Optional
 
 from PySide6.QtCore import QPoint, QRect, QRectF, Qt, QTimer, Signal
 from PySide6.QtGui import QColor, QFont, QPainter, QPainterPath, QPen, QPixmap
 from PySide6.QtWidgets import QSplashScreen, QApplication
-
-CHAR_SETS: Dict[str, str] = {
-    "katakana": (
-        "ア イ ウ エ オ カ キ ク ケ コ サ シ ス セ ソ "
-        "タ チ ツ テ ト ナ ニ ヌ ネ ノ ハ ヒ フ ヘ ホ "
-        "マ ミ ム メ モ ヤ ユ ヨ ラ リ ル レ ロ ワ ヰ "
-        "ヱ ヲ ン ァ ィ ァ ェ ォ ッ"
-    ),
-    "hex": "0123456789ABCDEF",
-    "latin": "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ",
-    "binary": "01",
-}
 
 DEFAULT_SPLASH = "matrix-rain"
 
@@ -44,7 +32,7 @@ class SplashConfig:
 
     name: str
     background: str = "#0d0d0d"
-    char_set: str = "katakana"          # clé de CHAR_SETS ou chaîne littérale
+    char_set: str = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"  # charset complet, dans le JSON
     head_color: str = "#00ff41"         # tête des colonnes (pleine opacité)
     body_color: str = "#00c832"         # base du dégradé des corps
     title: str = "GitMatrix"
@@ -70,10 +58,13 @@ class SplashConfig:
     fps_ms: int = 50
 
     def characters(self) -> List[str]:
-        if self.char_set in CHAR_SETS:
-            src = CHAR_SETS[self.char_set]
-            return src.split() if " " in src else list(src)
-        return list(self.char_set)
+        """Décompose ``char_set`` (chaîne littérale du JSON) en caractères.
+
+        Si le jeu contient des espaces, chaque espace sépare deux caractères
+        (nécessaire pour les katakanas) ; sinon chaque caractère de la
+        chaîne est retenu tel quel.
+        """
+        return self.char_set.split() if " " in self.char_set else list(self.char_set)
 
     def col_spacing_effective(self) -> int:
         return max(1, int(self.col_spacing * (1.0 / max(0.1, self.density))))
@@ -108,6 +99,23 @@ def list_splashes() -> List[str]:
     return names
 
 
+def list_charsets() -> List[str]:
+    """Jeux de caractères disponibles (définis dans les fichiers JSON).
+
+    Renvoie les valeurs ``char_set`` distinctes trouvées dans tous les
+    splash screens, dans l'ordre d'apparition.
+    """
+    seen: List[str] = []
+    for name in list_splashes():
+        try:
+            cs = load_splash_config(name).char_set
+        except FileNotFoundError:
+            continue
+        if cs and cs not in seen:
+            seen.append(cs)
+    return seen
+
+
 def _splash_dirs() -> List[Path]:
     bundled = Path(__file__).resolve().parent.parent / "assets" / "splashscreens"
     user = Path.home() / ".gitmatrix" / "splashscreens"
@@ -119,9 +127,18 @@ def _splash_dirs() -> List[Path]:
 
 
 def create_splash(name: str = "") -> "MatrixRainSplash":
-    """Fabrique un splash screen par son nom (défaut si vide)."""
+    """Fabrique un splash screen par son nom (défaut si vide).
+
+    Un jeu de caractères global choisi dans les paramètres
+    (``QSettings["charset"]``) remplace celui du fichier JSON du splash.
+    """
+    from PySide6.QtCore import QSettings
+
     chosen = name or DEFAULT_SPLASH
     config = load_splash_config(chosen)
+    override = QSettings().value("charset", "") or ""
+    if override and override != config.char_set:
+        config.char_set = override
     return MatrixRainSplash(config)
 
 
