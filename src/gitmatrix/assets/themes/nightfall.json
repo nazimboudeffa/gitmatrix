@@ -1,0 +1,37 @@
+{
+  "name": "Nightfall",
+  "tokens": {
+    "bg": "#1e2127",
+    "surface": "#22252b",
+    "surface_hover": "#2d3138",
+    "surface_pressed": "#262a31",
+    "widget_hover": "#373c44",
+    "border": "#3a3f46",
+    "border_soft": "#32363e",
+    "border_hover": "#4a5058",
+    "input_bg": "#2a2e35",
+    "selection": "#2f4f6f",
+    "fg": "#d7dae0",
+    "muted": "#9da5b4",
+    "faint": "#6b7381",
+    "accent": "#e5c07b",
+    "accent_hover": "#d4b06e",
+    "accent_pressed": "#c9a565",
+    "accent_fg": "#1f2228",
+    "danger": "#e06c75",
+    "focus": "#61afef",
+    "warn": "#d19a66"
+  },
+  "palette": [
+    "#e06c75",
+    "#61afef",
+    "#98c379",
+    "#e5c07b",
+    "#c678dd",
+    "#56b6c2",
+    "#d19a66",
+    "#ff7eb6",
+    "#6c8cff",
+    "#7bd88f"
+  ]
+}

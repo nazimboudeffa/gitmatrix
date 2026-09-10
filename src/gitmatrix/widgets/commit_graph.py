@@ -16,7 +16,7 @@ from PySide6.QtWidgets import QAbstractScrollArea, QToolTip
 
 from gitmatrix.core.git_repo import CommitInfo, GitRepo, RefInfo
 from gitmatrix.models.graph import GraphLayout, GraphNode
-from gitmatrix.theme import COLOR_PALETTE
+from gitmatrix.theme import current_color, current_palette
 
 ROW_HEIGHT = 42
 COLUMN_WIDTH = 22
@@ -107,8 +107,9 @@ class CommitGraphWidget(QAbstractScrollArea):
         self._assign_colors(layout)
 
         self._colors.clear()
+        palette_colors = current_palette()
         for i in range(max(1, layout.max_columns)):
-            self._colors[i] = QColor(COLOR_PALETTE[i % len(COLOR_PALETTE)])
+            self._colors[i] = QColor(palette_colors[i % len(palette_colors)])
 
         self._update_geometry()
 
@@ -123,7 +124,7 @@ class CommitGraphWidget(QAbstractScrollArea):
         if not self._entries:
             self._commit_colors = {}
             return
-        palette = [QColor(h) for h in COLOR_PALETTE]
+        palette = [QColor(h) for h in current_palette()]
         commit_by_sha = {e.commit.hexsha: e.commit for e in self._entries}
         tips = [
             e
@@ -175,10 +176,10 @@ class CommitGraphWidget(QAbstractScrollArea):
     def paintEvent(self, event) -> None:  # noqa: N802
         painter = QPainter(self.viewport())
         painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
-        painter.fillRect(self.viewport().rect(), QColor("#1e2127"))
+        painter.fillRect(self.viewport().rect(), QColor(current_color("bg")))
 
         if not self._layout or not self._entries:
-            painter.setPen(QColor("#9da5b4"))
+            painter.setPen(QColor(current_color("muted")))
             painter.drawText(
                 self.viewport().rect(),
                 Qt.AlignmentFlag.AlignCenter,
@@ -245,7 +246,7 @@ class CommitGraphWidget(QAbstractScrollArea):
 
         # Anneau de sélection (or)
         if entry.commit.hexsha == self._selected_sha:
-            painter.setPen(QPen(QColor("#e5c07b"), 2))
+            painter.setPen(QPen(QColor(current_color("accent")), 2))
             painter.setBrush(Qt.BrushStyle.NoBrush)
             painter.drawEllipse(
                 QRectF(
@@ -292,14 +293,14 @@ class CommitGraphWidget(QAbstractScrollArea):
             font.setBold(True)
         painter.setFont(font)
 
-        painter.setPen(QPen(QColor("#6b7381")))
+        painter.setPen(QPen(QColor(current_color("faint"))))
         painter.drawText(
             QRectF(text_x, y - 14, 420, 14),
             Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop,
             f"{entry.commit.author_name}  ·  {self._format_date(entry.commit)}",
         )
 
-        painter.setPen(QPen(QColor("#d7dae0")))
+        painter.setPen(QPen(QColor(current_color("fg"))))
         painter.drawText(
             QRectF(text_x, y + 3, 520, 16),
             Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop,
@@ -310,13 +311,13 @@ class CommitGraphWidget(QAbstractScrollArea):
 
     def _paint_refs(self, painter: QPainter, entry: GraphNode, x0: float, y: float) -> None:
         bg_map = {
-            "head": QColor("#e5c07b"),
+            "head": QColor(current_color("accent")),
             "branch": QColor("#3f9e63"),
             "tag": QColor("#5c6470"),
             "remote": QColor("#7b61b8"),
         }
         fg_map = {
-            "head": QColor("#1f2228"),
+            "head": QColor(current_color("accent_fg")),
             "branch": QColor("#ffffff"),
             "tag": QColor("#ffffff"),
             "remote": QColor("#ffffff"),

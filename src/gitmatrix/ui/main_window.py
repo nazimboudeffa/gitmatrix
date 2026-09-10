@@ -23,7 +23,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtGui import QIcon, QKeySequence, QAction, QShortcut
 
 from gitmatrix.core.git_repo import GitMatrixError, GitRepo, FileChange, FileDiff
-from gitmatrix.theme import DARK_QSS
+from gitmatrix.theme import current_qss, themeChanged
 from gitmatrix.widgets.commit_graph import CommitGraphWidget
 from gitmatrix.widgets.file_list import FileListWidget
 from gitmatrix.widgets.diff_viewer import DiffViewer
@@ -45,7 +45,7 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.setWindowTitle("GitMatrix")
         self.resize(1280, 780)
-        self.setStyleSheet(DARK_QSS)
+        self.setStyleSheet(current_qss())
 
         self._repo: Optional[GitRepo] = None
         self._current_commit = None
@@ -183,6 +183,7 @@ class MainWindow(QMainWindow):
         self.files.stage_all_requested.connect(self._stage_all)
         self.files.unstage_all_requested.connect(self._unstage_all)
         self.branches.branch_checked.connect(self._checkout_branch)
+        themeChanged.connect(self._on_theme_changed)
 
         # Désactiver les actions tant qu'aucun dépôt n'est ouvert
         self._set_actions_enabled(False)
@@ -499,8 +500,26 @@ class MainWindow(QMainWindow):
     def _open_about(self) -> None:
         AboutDialog(self).exec()
 
+    def _on_theme_changed(self) -> None:
+        """Recharge les couleurs cachées (graphe, branches) après un changement."""
+        self.setStyleSheet(current_qss())
+        if self._repo is not None:
+            self._refresh()
+
     def _open_settings(self) -> None:
-        SettingsDialog(self).exec()
+        # Fenêtre non-modale : une fenêtre modale (exec) active la boucle
+        # modale native de l'OS qui bloque l'entrée de toute autre fenêtre —
+        # l'aperçu splash plein écran ne pourrait jamais recevoir le clic
+        # « Lancer ».  Avec show(), le splash est cliquable et fonctionne.
+        if getattr(self, "_settings_dialog", None) is not None:
+            self._settings_dialog.raise_()
+            self._settings_dialog.activateWindow()
+            return
+        dlg = SettingsDialog(self)
+        self._settings_dialog = dlg
+        dlg.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, True)
+        dlg.destroyed.connect(lambda: setattr(self, "_settings_dialog", None))
+        dlg.show()
 
     def _update_status(self, commit=None) -> None:
         if self._repo is None:

@@ -16,7 +16,7 @@ from PySide6.QtWidgets import (
 )
 
 from gitmatrix.core.git_repo import RefInfo, GitMatrixError
-from gitmatrix.theme import COLOR_PALETTE, ACCENT
+from gitmatrix.theme import current_color, current_palette
 
 
 def _dot_icon(color: str, size: int = 8) -> QPixmap:
@@ -56,9 +56,14 @@ class BranchPanel(QListWidget):
         if self._repo is None:
             return
         active = self._repo.active_branch
+        palette_colors = current_palette()
         for i, b in enumerate(self._repo.all_branches()):
             is_active = b.name == active
-            dot = ACCENT if is_active else COLOR_PALETTE[i % len(COLOR_PALETTE)]
+            dot = (
+                current_color("accent")
+                if is_active
+                else palette_colors[i % len(palette_colors)]
+            )
             self._add_branch(b, dot, is_active)
 
         # Branches distantes (affichage seul, non modifiables)
@@ -109,7 +114,7 @@ class BranchPanel(QListWidget):
         name_lbl = QLabel(name)
         if active:
             name_lbl.setStyleSheet(
-                f"color:{ACCENT}; font-weight:600; background:transparent;"
+                f"color:{current_color('accent')}; font-weight:600; background:transparent;"
             )
         lay.addWidget(name_lbl)
 

@@ -1,0 +1,37 @@
+{
+  "name": "Matrix Void",
+  "tokens": {
+    "bg": "#0a0f0a",
+    "surface": "#0f1710",
+    "surface_hover": "#16221a",
+    "surface_pressed": "#131b14",
+    "widget_hover": "#1c2a1f",
+    "border": "#1f3a24",
+    "border_soft": "#1a2b1d",
+    "border_hover": "#2e5133",
+    "input_bg": "#0c140d",
+    "selection": "#1d4a2b",
+    "fg": "#cfe8d2",
+    "muted": "#7fa887",
+    "faint": "#56705c",
+    "accent": "#00e676",
+    "accent_hover": "#00c862",
+    "accent_pressed": "#00b355",
+    "accent_fg": "#06110a",
+    "danger": "#ff5252",
+    "focus": "#00ffaa",
+    "warn": "#ffb74d"
+  },
+  "palette": [
+    "#00e676",
+    "#64ffda",
+    "#b2ff59",
+    "#76ff03",
+    "#18ffff",
+    "#69f0ae",
+    "#ccff90",
+    "#40c4ff",
+    "#9fff80",
+    "#a7ffeb"
+  ]
+}

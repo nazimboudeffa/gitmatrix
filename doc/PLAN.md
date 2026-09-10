@@ -69,7 +69,7 @@ Mise au niveau GitKraken en termes d'UX.
 - [ ] Onglet « Changements » détaché : aperçu live du working tree
 - [ ] Barre d'activité latérale (style VSCode) regroupant : graphe, branches, remotes, stash, tags, paramètres
 - [ ] Filtres du graphe : une branche, une période, un auteur
-- [ ] Thème clair + bascule de thème (le système de tokens OKLCh est prêt)
+- [x] Thèmes multiples + bascule (Nightfall / Matrix Void / Daylight — extensible JSON)
 - [ ] Raccourcis clavier (Ctrl+Return commit, Ctrl+Shift+S stash, Ctrl+P push…)
 - [ ] Historique paginé / chargement paresseux (walk_commits limité → « plus de commits »)
 - [ ] Traitement asynchrone (QThread) des opérations longues (fetch/push) sans bloquer l'UI
@@ -103,6 +103,14 @@ s'intercale entre les phases fonctionnelles — chaque version doit embarquer
 - [x] Bouton « Lancer » (apparaît à 100 %, l'animation continue)
 - [x] Clic n'importe où = skip
 
+### Système de thèmes et de splash screens (fait, v0.3.1)
+- [x] **Thèmes** chargés en JSON depuis `assets/themes` + `~/.gitmatrix/themes` (tokens + palette, template QSS généré, override complet possible)
+- [x] **Splash screens** configurés en JSON depuis `assets/splashscreens` + `~/.gitmatrix/splashscreens` (couleurs, caractères, densité, vitesse)
+- [x] 3 thèmes prédéfinis : Nightfall (défaut), Matrix Void, Daylight
+- [x] 3 splash prédéfinis : Matrix Rain (défaut), Gold Rain, Minimal
+- [x] Paramètres : sélecteurs thème + splash, persistés via `QSettings`, thème appliqué à chaud
+- [ ] Nouveaux thèmes/splash : documenter le format JSON (exemples + guide)
+
 ### Effets visuels — à faire
 - [ ] **Rayon** matrix en filigrane sur les panneaux ou l'état vide du graphe
 - [ ] **Scan line** ou lueur verte sur la ligne du commit sélectionné
@@ -122,7 +130,8 @@ s'intercale entre les phases fonctionnelles — chaque version doit embarquer
 - Export du graphe en image/PDF
 - Mode « GitKraken look » : filtre de branche animé, courbes douces
 - i18n : anglais/français (fichiers de traduction Qt `.ts`)
-- Préférences persistantes (`QSettings`) : thème, colonnes, repo récent
+- Préférences persistantes (`QSettings`) enrichies : colonnes, repo récent
+  (thème + splash déjà persistés)
 
 ---
 

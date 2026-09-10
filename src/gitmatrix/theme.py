@@ -1,19 +1,56 @@
-"""Thème sombre global de GitMatrix (QSS).
+"""Thèmes de GitMatrix.
 
-Basé sur la spec ``doc/brand-spec.md`` : fond anthracite #1e2127,
-surface #22252b, accent doré #e5c07b, textes #d7dae0 / #9da5b4.
+Système de thèmes enrichi (tokens + QSS) :
+
+* Un thème est défini par un fichier JSON ``{name, tokens, palette, qss}``.
+* Les thèmes sont chargés depuis ::
+
+    - ``assets/themes``      (thèmes prédéfinis fournis avec l'app)
+    - ``~/.gitmatrix/themes``(thèmes ajoutés par l'utilisateur)
+
+* Les tokens sont interpolés dans un template QSS : un utilisateur peut
+  n'écraser qu'une partie des couleurs.  Le champ ``qss`` permet de
+  fournir une feuille de style complète (remplace le template).
 """
 
-# Palette de BASE de l'interface — réutilisée par les widgets.
-BG = "#1e2127"
-SURFACE = "#22252b"
-FG = "#d7dae0"
-MUTED = "#9da5b4"
-BORDER = "#3a3f46"
-ACCENT = "#e5c07b"
+from __future__ import annotations
 
-# Palette de couleurs PAR BRANCHE (distincte de l'accent, cf. brand-spec).
-COLOR_PALETTE = [
+import json
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Dict, List, Optional
+
+# Compatibilité QSettings : organisation définie dans app.py.
+from PySide6.QtCore import QSettings
+
+# ---------------------------------------------------------------------------
+# Tokens par défaut — le « contrat » du template QSS.
+# ---------------------------------------------------------------------------
+DEFAULT_TOKENS: Dict[str, str] = {
+    "bg": "#1e2127",              # fond principal
+    "surface": "#22252b",         # panneaux / toolbar / statusbar
+    "surface_hover": "#2d3138",   # survol toolbar, boutons, chips
+    "surface_pressed": "#262a31", # pressé / chips / items
+    "widget_hover": "#373c44",    # survol des boutons poussoirs
+    "border": "#3a3f46",          # hairlines
+    "border_soft": "#32363e",     # bordures des zones d'édition
+    "border_hover": "#4a5058",    # hover scrollbar / boutons
+    "input_bg": "#2a2e35",        # QLineEdit, splits
+    "selection": "#2f4f6f",       # sélection de liste / menus
+    "fg": "#d7dae0",              # texte principal
+    "muted": "#9da5b4",           # texte secondaire
+    "faint": "#6b7381",           # texte désactivé / auteur de commit
+    "accent": "#e5c07b",          # accent doré (action primaire)
+    "accent_hover": "#d4b06e",    # hover de l'accent
+    "accent_pressed": "#c9a565",  # pressé de l'accent
+    "accent_fg": "#1f2228",       # texte sur fond accent
+    "danger": "#e06c75",          # actions dangereuses
+    "focus": "#61afef",           # bordure de focus
+    "white": "#ffffff",           # texte sur sélection / badges
+    "warn": "#d19a66",            # chip « dirty », unstaged
+}
+
+DEFAULT_PALETTE: List[str] = [
     "#e06c75",  # rouge
     "#61afef",  # bleu
     "#98c379",  # vert
@@ -26,16 +63,104 @@ COLOR_PALETTE = [
     "#7bd88f",  # vert clair
 ]
 
-DARK_QSS = """
+# Contribution minimale pour un thème personnalisé utile.
+MINIMAL_TOKENS = {"bg", "fg", "accent", "palette"}
+
+
+def render_qss(tokens: Dict[str, str]) -> str:
+    """Génère la feuille de style QSS depuis le contrat de tokens."""
+    merged = {**DEFAULT_TOKENS, **tokens}
+    qss = _QSS_TEMPLATE
+    for key, value in merged.items():
+        qss = qss.replace("{" + key + "}", value)
+    return qss
+
+
+# ---------------------------------------------------------------------------
+# Dataclasses
+# ---------------------------------------------------------------------------
+@dataclass
+class Theme:
+    """Un thème GitMatrix."""
+
+    name: str
+    tokens: Dict[str, str] = field(default_factory=dict)
+    palette: List[str] = field(default_factory=list)
+    qss: Optional[str] = None
+
+    def stylesheet(self) -> str:
+        if self.qss:
+            return self.qss
+        return render_qss(self.tokens)
+
+    def color(self, token: str, fallback: Optional[str] = None) -> str:
+        return self.tokens.get(token, fallback or DEFAULT_TOKENS.get(token, ""))
+
+
+# ---------------------------------------------------------------------------
+# Emplacements des thèmes
+# ---------------------------------------------------------------------------
+BUNDLED_THEMES_DIR = Path(__file__).resolve().parent / "assets" / "themes"
+USER_THEMES_DIR = Path.home() / ".gitmatrix" / "themes"
+
+DEFAULT_THEME = "nightfall"
+
+
+def theme_dirs() -> List[Path]:
+    dirs: List[Path] = []
+    if BUNDLED_THEMES_DIR.is_dir():
+        dirs.append(BUNDLED_THEMES_DIR)
+    dirs.append(USER_THEMES_DIR)
+    return dirs
+
+
+def list_themes() -> List[str]:
+    """Noms des thèmes disponibles (prédéfinis puis utilisateur, dédupliqués)."""
+    names: List[str] = []
+    for d in theme_dirs():
+        if not d.is_dir():
+            continue
+        for p in sorted(d.glob("*.json")):
+            name = p.stem
+            if name not in names:
+                names.append(name)
+    return names
+
+
+def load_theme(name: str) -> Theme:
+    """Charge un thème par son nom depuis les dossiers prédéfinis/utilisateur."""
+    for d in theme_dirs():
+        candidate = d / f"{name}.json"
+        if candidate.is_file():
+            data = json.loads(candidate.read_text(encoding="utf-8"))
+            return Theme(
+                name=data.get("name", name),
+                tokens=data.get("tokens", {}),
+                palette=data.get("palette", []),
+                qss=data.get("qss"),
+            )
+    raise FileNotFoundError(f"Thème introuvable : {name}")
+
+
+# ---------------------------------------------------------------------------
+# État actif + persistance (QSettings)
+# ---------------------------------------------------------------------------
+_ACTIVE: Optional[Theme] = None
+
+
+# ---------------------------------------------------------------------------
+# Template QSS (le « contrat » référencé par les tokens)
+# ---------------------------------------------------------------------------
+_QSS_TEMPLATE = """
 QMainWindow, QWidget {
-    background-color: #1e2127;
-    color: #d7dae0;
+    background-color: {bg};
+    color: {fg};
     font-size: 13px;
 }
 
 QToolBar {
-    background-color: #22252b;
-    border-bottom: 1px solid #3a3f46;
+    background-color: {surface};
+    border-bottom: 1px solid {border};
     padding: 4px;
     spacing: 4px;
 }
@@ -44,155 +169,156 @@ QToolBar QToolButton {
     border: 1px solid transparent;
     border-radius: 4px;
     padding: 5px 11px;
-    color: #d7dae0;
+    color: {fg};
     font-weight: 500;
 }
 QToolBar QToolButton:hover {
-    background-color: #2d3138;
-    border-color: #3a3f46;
+    background-color: {surface_hover};
+    border-color: {border};
 }
 QToolBar QToolButton:pressed {
-    background-color: #262a31;
+    background-color: {surface_pressed};
 }
 QToolBar QToolButton:disabled {
-    color: #6b7381;
+    color: {faint};
 }
 
 /* Bouton d'action primaire (Commit) dans la toolbar — accent doré */
 QToolBar QToolButton#ActionCommit {
-    background-color: #e5c07b;
-    border-color: #e5c07b;
-    color: #1f2228;
+    background-color: {accent};
+    border-color: {accent};
+    color: {accent_fg};
     font-weight: 600;
     padding: 5px 16px;
 }
 QToolBar QToolButton#ActionCommit:hover {
-    background-color: #d4b06e;
-    border-color: #d4b06e;
+    background-color: {accent_hover};
+    border-color: {accent_hover};
 }
 QToolBar QToolButton#ActionCommit:pressed {
-    background-color: #c9a565;
+    background-color: {accent_pressed};
 }
 QToolBar QToolButton#ActionDanger {
-    color: #e06c75;
+    color: {danger};
 }
 
 /* Bouton de branche courant (sélecteur) dans la toolbar */
 QToolBar QToolButton#ActionBranch {
-    background-color: #2d3138;
-    border-color: #3a3f46;
+    background-color: {surface_hover};
+    border-color: {border};
     font-weight: 600;
 }
 QToolBar QToolButton#ActionBranch:hover {
-    border-color: #9da5b4;
+    border-color: {muted};
 }
 
 /* Bouton Settings (menu déroulant engrenage) à droite de la toolbar */
 QToolBar QToolButton#ActionSettings {
-    color: #d7dae0;
+    color: {fg};
     font-weight: 500;
 }
 QToolBar QToolButton#ActionSettings:hover {
-    background-color: #2d3138;
-    border-color: #3a3f46;
+    background-color: {surface_hover};
+    border-color: {border};
 }
 QToolBar QToolButton#ActionSettings:pressed {
-    background-color: #262a31;
+    background-color: {surface_pressed};
 }
+
 QToolBar QToolButton::menu-indicator {
     image: none;
 }
 
 QTreeWidget, QListWidget, QPlainTextEdit {
-    background-color: #22252b;
-    border: 1px solid #32363e;
+    background-color: {surface};
+    border: 1px solid {border_soft};
     border-radius: 4px;
     padding: 4px;
-    selection-background-color: #2f4f6f;
-    selection-color: #ffffff;
+    selection-background-color: {selection};
+    selection-color: {white};
 }
 QTreeWidget::item, QListWidget::item {
     border-radius: 3px;
 }
 QTreeWidget::item:hover, QListWidget::item:hover {
-    background-color: #262a31;
+    background-color: {surface_pressed};
 }
 
 QSplitter::handle {
-    background-color: #2a2e35;
+    background-color: {input_bg};
     width: 6px;
     height: 6px;
 }
 QSplitter::handle:hover {
-    background-color: #3a3f46;
+    background-color: {border};
 }
 
 QStatusBar {
-    background-color: #22252b;
-    color: #9da5b4;
-    border-top: 1px solid #32363e;
+    background-color: {surface};
+    color: {muted};
+    border-top: 1px solid {border_soft};
 }
 
 QInputDialog, QInputDialog QLabel {
-    background-color: #22252b;
-    color: #d7dae0;
+    background-color: {surface};
+    color: {fg};
 }
 
 QMessageBox, QMessageBox QLabel {
-    background-color: #22252b;
-    color: #d7dae0;
+    background-color: {surface};
+    color: {fg};
 }
 
 QLineEdit {
-    background-color: #2a2e35;
-    border: 1px solid #3a3f46;
+    background-color: {input_bg};
+    border: 1px solid {border};
     border-radius: 4px;
     padding: 5px 8px;
-    color: #d7dae0;
-    selection-background-color: #2f4f6f;
+    color: {fg};
+    selection-background-color: {selection};
 }
 QLineEdit:focus {
-    border-color: #61afef;
+    border-color: {focus};
 }
 
 QDialog {
-    background-color: #22252b;
+    background-color: {surface};
 }
 
 QPushButton {
-    background-color: #2d3138;
-    border: 1px solid #3a3f46;
+    background-color: {surface_hover};
+    border: 1px solid {border};
     border-radius: 4px;
     padding: 7px 16px;
-    color: #d7dae0;
+    color: {fg};
     font-weight: 500;
 }
 QPushButton:hover {
-    background-color: #373c44;
-    border-color: #4a5058;
+    background-color: {widget_hover};
+    border-color: {border_hover};
 }
 QPushButton:pressed {
-    background-color: #262a31;
+    background-color: {surface_pressed};
 }
 QPushButton:disabled {
-    color: #6b7381;
-    background-color: #262a31;
+    color: {faint};
+    background-color: {surface_pressed};
 }
 /* Bouton primaire (Committer) */
 QPushButton[accent="true"] {
-    background-color: #e5c07b;
-    border-color: #e5c07b;
-    color: #1f2228;
+    background-color: {accent};
+    border-color: {accent};
+    color: {accent_fg};
     font-weight: 600;
 }
 QPushButton[accent="true"]:hover {
-    background-color: #d4b06e;
-    border-color: #d4b06e;
+    background-color: {accent_hover};
+    border-color: {accent_hover};
 }
 
 QLabel#PanelTitle {
     font-weight: 600;
-    color: #9da5b4;
+    color: {muted};
     background-color: transparent;
     border: none;
     padding: 4px 2px;
@@ -201,8 +327,8 @@ QLabel#PanelTitle {
 }
 
 QMenu {
-    background-color: #22252b;
-    border: 1px solid #3a3f46;
+    background-color: {surface};
+    border: 1px solid {border};
     padding: 4px;
 }
 QMenu::item {
@@ -210,25 +336,25 @@ QMenu::item {
     border-radius: 3px;
 }
 QMenu::item:selected {
-    background-color: #2f4f6f;
-    color: #ffffff;
+    background-color: {selection};
+    color: {white};
 }
 QMenu::item:disabled {
-    color: #6b7381;
+    color: {faint};
 }
 
 QScrollBar:vertical {
-    background: #1e2127;
+    background: {bg};
     width: 10px;
     margin: 0;
 }
 QScrollBar::handle:vertical {
-    background: #3a3f46;
+    background: {border};
     border-radius: 4px;
     min-height: 30px;
 }
 QScrollBar::handle:vertical:hover {
-    background: #4a5058;
+    background: {border_hover};
 }
 QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
     height: 0;
@@ -236,9 +362,9 @@ QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
 
 /* Tooltip natif */
 QToolTip {
-    background-color: #2d3138;
-    color: #d7dae0;
-    border: 1px solid #3a3f46;
+    background-color: {surface_hover};
+    color: {fg};
+    border: 1px solid {border};
     padding: 6px 10px;
 }
 
@@ -249,17 +375,17 @@ QLabel#PanelHeaderMono {
     font-weight: 600;
     letter-spacing: 0.06em;
     text-transform: uppercase;
-    color: #9da5b4;
+    color: {muted};
     background-color: transparent;
     border: none;
     padding: 10px 14px 8px;
-    border-bottom: 1px solid #2f333b;
+    border-bottom: 1px solid {border_soft};
 }
 
 /* Compteur dans un en-tête (pastille arrondie) */
 QLabel#HeaderCount {
-    background-color: #2d3138;
-    color: #9da5b4;
+    background-color: {surface_hover};
+    color: {muted};
     border-radius: 8px;
     padding: 1px 7px;
     font-size: 10px;
@@ -268,25 +394,25 @@ QLabel#HeaderCount {
 
 /* Status bar : texte principal */
 QStatusBar QLabel#StatusBarText {
-    color: #9da5b4;
+    color: {muted};
     font-size: 12px;
     background-color: transparent;
 }
 
 /* Status bar : chip (branche / staged / unstaged) */
 QLabel#StatusChip {
-    background-color: #262a31;
-    border: 1px solid #343941;
+    background-color: {surface_pressed};
+    border: 1px solid {border_soft};
     border-radius: 10px;
     padding: 2px 10px;
     font-size: 11px;
 }
 QLabel#StatusChip[chip="branch"] {
-    color: #e5c07b;
+    color: {accent};
     font-weight: 600;
 }
 QLabel#StatusChip[chip="dirty"] {
-    color: #d19a66;
+    color: {warn};
 }
 
 /* Pastille ronde dans les chips de la status bar */
@@ -294,3 +420,85 @@ QLabel#StatusDot {
     background-color: transparent;
 }
 """
+
+
+# ---------------------------------------------------------------------------
+# État actif + persistance
+# ---------------------------------------------------------------------------
+def current_theme_name() -> str:
+    settings = QSettings()
+    name = settings.value("theme", DEFAULT_THEME)
+    if name not in list_themes():
+        return DEFAULT_THEME
+    return name
+
+
+def set_current_theme(name: str) -> None:
+    QSettings().setValue("theme", name)
+
+
+def current_theme() -> Theme:
+    """Thème actif (mis en cache)."""
+    global _ACTIVE
+    name = current_theme_name()
+    if _ACTIVE is None or _ACTIVE.name != name:
+        _ACTIVE = load_theme(name)
+    return _ACTIVE
+
+
+def current_qss() -> str:
+    return current_theme().stylesheet()
+
+
+def current_palette() -> List[str]:
+    theme = current_theme()
+    return theme.palette if theme.palette else DEFAULT_PALETTE
+
+
+def current_color(token: str) -> str:
+    return current_theme().color(token)
+
+
+# Signal notifiant tout widget d'un changement de thème actif.
+from PySide6.QtCore import QObject, Signal as _Signal
+
+
+class _ThemeSignals(QObject):
+    changed = _Signal()
+
+
+_theme_signals = _ThemeSignals()
+themeChanged = _theme_signals.changed
+
+
+def apply_theme_to(app, name: str = "") -> None:
+    """Applique le thème sur toute l'application (widgets déjà créés compris).
+
+    ``app`` doit être l'instance QApplication (pas une fenêtre) pour que le
+    QSS se propage à toutes les fenêtres, y compris les dialogues ouverts.
+    Repolish toutes les top-level widgets puis émet ``themeChanged`` pour que
+    les widgets qui cachent des couleurs (graphe, branches) se rechargent.
+    """
+    if name:
+        set_current_theme(name)
+    global _ACTIVE
+    _ACTIVE = None  # force le rechargement
+    app.setStyleSheet(current_qss())
+    for w in app.topLevelWidgets():
+        w.style().unpolish(w)
+        w.style().polish(w)
+        w.update()
+    themeChanged.emit()
+
+
+# ---------------------------------------------------------------------------
+# Compatibilité : les anciens noms restent disponibles (palette par défaut).
+# ---------------------------------------------------------------------------
+BG = DEFAULT_TOKENS["bg"]
+SURFACE = DEFAULT_TOKENS["surface"]
+FG = DEFAULT_TOKENS["fg"]
+MUTED = DEFAULT_TOKENS["muted"]
+BORDER = DEFAULT_TOKENS["border"]
+ACCENT = DEFAULT_TOKENS["accent"]
+COLOR_PALETTE = list(DEFAULT_PALETTE)
+DARK_QSS = render_qss({})

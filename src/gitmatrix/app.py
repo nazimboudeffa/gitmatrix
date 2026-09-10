@@ -24,9 +24,13 @@ def main(argv=None) -> int:
     app.setApplicationName("GitMatrix")
     app.setOrganizationName("GitMatrix")
 
-    from gitmatrix.ui.splash_screen import MatrixRainSplash
+    from gitmatrix.theme import apply_theme_to
+    apply_theme_to(app)
 
-    splash = MatrixRainSplash()
+    from gitmatrix.ui.splash_screen import create_splash
+    from PySide6.QtCore import QSettings
+
+    splash = create_splash(QSettings().value("splash", "") or "")
     splash.show()
     app.processEvents()
 
