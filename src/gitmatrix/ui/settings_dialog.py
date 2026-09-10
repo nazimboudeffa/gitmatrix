@@ -5,6 +5,7 @@ from __future__ import annotations
 from PySide6.QtCore import QSettings, Qt
 from PySide6.QtWidgets import (
     QApplication,
+    QCheckBox,
     QDialog,
     QVBoxLayout,
     QHBoxLayout,
@@ -89,6 +90,15 @@ class SettingsDialog(QDialog):
                 "cliquez sur « Aperçu » pour voir le rendu."
             )
         )
+
+        self._splash_enabled = QCheckBox("Activer le splash screen au démarrage")
+        self._splash_enabled.setChecked(
+            QSettings().value("enable_splash", True, type=bool)
+        )
+        self._splash_enabled.toggled.connect(
+            lambda on: QSettings().setValue("enable_splash", on)
+        )
+        layout.addWidget(self._splash_enabled)
 
         close_btn = QPushButton("Fermer")
         close_btn.clicked.connect(self.accept)
