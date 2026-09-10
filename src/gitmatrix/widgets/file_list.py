@@ -33,7 +33,7 @@ class FileListWidget(QTreeWidget):
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
-        self.setHeaderLabels(["Fichier", ""])
+        self.setHeaderLabels(["File", ""])
         self.header().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
         self.header().setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)

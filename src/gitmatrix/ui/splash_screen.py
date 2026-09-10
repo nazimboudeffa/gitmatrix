@@ -84,7 +84,7 @@ def load_splash_config(name: str) -> SplashConfig:
                 if k in keys:
                     setattr(cfg, k, v)
             return cfg
-    raise FileNotFoundError(f"Splash introuvable : {name}")
+    raise FileNotFoundError(f"Splash not found: {name}")
 
 
 def list_splashes() -> List[str]:
@@ -183,7 +183,7 @@ class MatrixRainSplash(QSplashScreen):
     def __init__(self, config: Optional[SplashConfig] = None) -> None:
         self.cfg = config or SplashConfig(name=DEFAULT_SPLASH)
         self._progress = 0.0
-        self._status = "Initialisation\u2026"
+        self._status = "Initializing…"
         self._ready = False
         self._btn_rect = QRect()
         self._hovering = False
@@ -243,7 +243,7 @@ class MatrixRainSplash(QSplashScreen):
             self._status = text
         if self._progress >= 1.0 and not self._ready:
             self._ready = True
-            self._status = "Prêt"
+            self._status = "Ready"
         self._tick()
 
     # ------------------------------------------------------------------

@@ -12,7 +12,7 @@ def main(argv=None) -> int:
     parser.add_argument(
         "-r",
         "--repo",
-        help="Chemin vers le dépôt Git à ouvrir au lancement",
+        help="Path to the Git repository to open at launch",
     )
     args = parser.parse_args(argv)
 
@@ -40,19 +40,19 @@ def main(argv=None) -> int:
             splash.set_progress(frac, text)
         app.processEvents()
 
-    progress(0.1, "Chargement de l\u2019interface\u2026")
+    progress(0.1, "Loading interface…")
 
     window = MainWindow()
 
-    progress(0.3, "Initialisation des widgets\u2026")
+    progress(0.3, "Initializing widgets…")
 
     target = args.repo or (os.getcwd() if os.path.isdir(".git") else None)
     if target is not None:
-        progress(0.8, "Chargement du dépôt\u2026")
+        progress(0.8, "Loading repository…")
         window.load_repo(target)
-        progress(0.95, f"Dépôt chargé \u2014 {window._repo.active_branch or ''}")
+        progress(0.95, f"Repository loaded — {window._repo.active_branch or ''}")
 
-    progress(1.0, "Prêt")
+    progress(1.0, "Ready")
 
     if splash is not None:
         loop = QEventLoop()

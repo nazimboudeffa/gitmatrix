@@ -183,7 +183,7 @@ class CommitGraphWidget(QAbstractScrollArea):
             painter.drawText(
                 self.viewport().rect(),
                 Qt.AlignmentFlag.AlignCenter,
-                "Aucun commit à afficher.",
+                "No commits to display.",
             )
             return
 

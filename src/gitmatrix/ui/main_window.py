@@ -62,7 +62,7 @@ class MainWindow(QMainWindow):
 
         # Panneau de droite : liste des fichiers + diff
         right_side = QSplitter(Qt.Orientation.Vertical)
-        right_side.addWidget(self._titled("Modifications", self.files))
+        right_side.addWidget(self._titled("Changes", self.files))
         right_side.addWidget(self._titled("Diff", self.diff_viewer))
         right_side.setStretchFactor(0, 1)
         right_side.setStretchFactor(1, 2)
@@ -90,13 +90,13 @@ class MainWindow(QMainWindow):
         self.addToolBar(toolbar)
 
         # Groupe 1 : Fichier (à gauche)
-        act_clone = toolbar.addAction(_icon("clone"), "Cloner", self._clone_repo)
-        act_clone.setToolTip("Cloner un dépôt distant")
-        act_open = toolbar.addAction(_icon("open"), "Ouvrir", self._open_repo)
-        act_open.setToolTip("Ouvrir un dépôt (Ctrl+O)")
+        act_clone = toolbar.addAction(_icon("clone"), "Clone", self._clone_repo)
+        act_clone.setToolTip("Clone a remote repository")
+        act_open = toolbar.addAction(_icon("open"), "Open", self._open_repo)
+        act_open.setToolTip("Open a repository (Ctrl+O)")
         self._set_shortcut(act_open, "Ctrl+O")
-        act_refresh = toolbar.addAction(_icon("refresh"), "Actualiser", self._refresh)
-        act_refresh.setToolTip("Recharger le graphe (Ctrl+R)")
+        act_refresh = toolbar.addAction(_icon("refresh"), "Refresh", self._refresh)
+        act_refresh.setToolTip("Reload graph (Ctrl+R)")
         self._set_shortcut(act_refresh, "Ctrl+R")
 
         # Groupe 2 : Branche (contexte) — sélecteur, à côté d'Actualiser
@@ -116,7 +116,7 @@ class MainWindow(QMainWindow):
         act_stage_all = toolbar.addAction(
             _icon("stage-all"), "Stage All", self._stage_all
         )
-        act_stage_all.setToolTip("Tout indexer (Ctrl+S)")
+        act_stage_all.setToolTip("Stage all (Ctrl+S)")
         self._set_shortcut(act_stage_all, "Ctrl+S")
         act_unstage_all = toolbar.addAction(
             _icon("unstage-all"), "Unstage All", self._unstage_all
@@ -130,7 +130,7 @@ class MainWindow(QMainWindow):
         b = toolbar.widgetForAction(act_commit)
         if isinstance(b, QToolButton):
             b.setObjectName("ActionCommit")
-            b.setToolTip("Créer un commit (Ctrl+Return)")
+            b.setToolTip("Create a commit (Ctrl+Return)")
             self._set_shortcut(act_commit, "Ctrl+Return")
 
         # Groupe 6 : Publier (après le commit) — push
@@ -207,8 +207,8 @@ class MainWindow(QMainWindow):
         btn.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextUnderIcon)
         btn.setIconSize(QSize(15, 15))
         btn.setIcon(_icon("branch"))
-        btn.setText("Branche")
-        btn.setToolTip("Branche active — menu pour basculer")
+        btn.setText("Branch")
+        btn.setToolTip("Active branch — switch menu")
         btn.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
         btn.setMenu(QMenu(self))
         btn.setEnabled(False)
@@ -221,16 +221,16 @@ class MainWindow(QMainWindow):
         btn.setIconSize(QSize(15, 15))
         btn.setIcon(_icon("settings"))
         btn.setText("Settings")
-        btn.setToolTip("Paramètres et informations")
+        btn.setToolTip("Settings and information")
         btn.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
         menu = QMenu(self)
 
-        act_settings = menu.addAction(_icon("settings"), "Paramètres du logiciel…")
+        act_settings = menu.addAction(_icon("settings"), "Software Settings…")
         act_settings.triggered.connect(self._open_settings)
 
         menu.addSeparator()
 
-        act_about = menu.addAction(_icon("about"), "À propos")
+        act_about = menu.addAction(_icon("about"), "About")
         act_about.triggered.connect(self._open_about)
 
         btn.setMenu(menu)
@@ -325,7 +325,7 @@ class MainWindow(QMainWindow):
         return True
 
     def _open_repo(self) -> None:
-        path = QFileDialog.getExistingDirectory(self, "Choisir un dépôt Git")
+        path = QFileDialog.getExistingDirectory(self, "Choose a Git repository")
         if path:
             self.load_repo(path)
 
@@ -336,13 +336,13 @@ class MainWindow(QMainWindow):
         url, dest = dialog.values()
         if not url or not dest:
             QMessageBox.warning(
-                self, "Cloner", "L'URL et l'emplacement sont requis."
+                self, "Clone", "URL and destination are required."
             )
             return
         try:
             repo = GitRepo.clone(url, dest)
         except GitMatrixError as exc:
-            QMessageBox.critical(self, "Erreur", str(exc))
+            QMessageBox.critical(self, "Error", str(exc))
             return
         self.load_repo(repo.path)
 
@@ -357,7 +357,7 @@ class MainWindow(QMainWindow):
             # re-afficher le diff du commit sélectionné si présent
             self._refresh_commit_detail()
         except GitMatrixError as exc:
-            QMessageBox.warning(self, "Erreur", str(exc))
+            QMessageBox.warning(self, "Error", str(exc))
         self._update_status()
 
     def _refresh_commit_detail(self) -> None:
@@ -376,7 +376,7 @@ class MainWindow(QMainWindow):
         try:
             diffs = self._repo.diff_commit(commit.hexsha)
         except GitMatrixError as exc:
-            QMessageBox.warning(self, "Erreur", str(exc))
+            QMessageBox.warning(self, "Error", str(exc))
             return
         self._commit_mode_sha = commit.hexsha
         self.files.set_commit_files(diffs, commit.short_sha)
@@ -387,7 +387,7 @@ class MainWindow(QMainWindow):
         try:
             found = self._repo.diff_commit_file(self._commit_mode_sha, file_diff.path)
         except GitMatrixError as exc:
-            QMessageBox.warning(self, "Erreur", str(exc))
+            QMessageBox.warning(self, "Error", str(exc))
             return
         header = f"{self._commit_mode_sha[:8]} · {file_diff.path}"
         self.diff_viewer.show_diff(found, title=header)
@@ -399,14 +399,14 @@ class MainWindow(QMainWindow):
         try:
             diffs = self._repo.diff_commit(commit.hexsha)
         except GitMatrixError as exc:
-            QMessageBox.warning(self, "Erreur", str(exc))
+            QMessageBox.warning(self, "Error", str(exc))
             return
         # Affiche le premier diff ; l'en-tête mentionne le nombre de fichiers
         if diffs:
-            header = f"{commit.short_sha} · {len(diffs)} fichier(s) modifié(s)"
+            header = f"{commit.short_sha} · {len(diffs)} modified file(s)"
             self.diff_viewer.show_diff(diffs[0], title=header)
         else:
-            self.diff_viewer.show_diff(None, title=f"{commit.short_sha} · aucun changement")
+            self.diff_viewer.show_diff(None, title=f"{commit.short_sha} · no changes")
 
     def _on_file_selected(self, file_change: FileChange) -> None:
         if self._repo is None:
@@ -440,7 +440,7 @@ class MainWindow(QMainWindow):
 
     def _open_commit_dialog(self) -> None:
         if self._repo is None:
-            QMessageBox.information(self, "GitMatrix", "Ouvrez d'abord un dépôt.")
+            QMessageBox.information(self, "GitMatrix", "Open a repository first.")
             return
         dialog = CommitDialog(self)
         if dialog.exec():
@@ -449,7 +449,7 @@ class MainWindow(QMainWindow):
                 self._current_commit = self.commit_graph.selected_commit
                 self.commit_graph.select_commit(new_sha)
             except GitMatrixError as exc:
-                QMessageBox.critical(self, "Erreur", str(exc))
+                QMessageBox.critical(self, "Error", str(exc))
         self._refresh()
 
     def _checkout_branch(self, name: str) -> None:
@@ -458,44 +458,44 @@ class MainWindow(QMainWindow):
         try:
             self._repo.checkout(name)
         except GitMatrixError as exc:
-            QMessageBox.critical(self, "Erreur", str(exc))
+            QMessageBox.critical(self, "Error", str(exc))
         self._refresh()
 
     def _fetch(self) -> None:
         if self._repo is None:
-            QMessageBox.information(self, "GitMatrix", "Ouvrez d'abord un dépôt.")
+            QMessageBox.information(self, "GitMatrix", "Open a repository first.")
             return
         try:
             output = self._repo.fetch()
         except GitMatrixError as exc:
-            QMessageBox.critical(self, "Erreur", str(exc))
+            QMessageBox.critical(self, "Error", str(exc))
             return
         self._refresh()
-        self.status.showMessage(f"Fetch effectué : {output}", 8000)
+        self.status.showMessage(f"Fetch completed: {output}", 8000)
 
     def _push(self) -> None:
         if self._repo is None:
-            QMessageBox.information(self, "GitMatrix", "Ouvrez d'abord un dépôt.")
+            QMessageBox.information(self, "GitMatrix", "Open a repository first.")
             return
         try:
             output = self._repo.push()
         except GitMatrixError as exc:
-            QMessageBox.critical(self, "Erreur", str(exc))
+            QMessageBox.critical(self, "Error", str(exc))
             return
         self._refresh()
-        self.status.showMessage(f"Push effectué : {output}", 8000)
+        self.status.showMessage(f"Push completed: {output}", 8000)
 
     def _pull(self) -> None:
         if self._repo is None:
-            QMessageBox.information(self, "GitMatrix", "Ouvrez d'abord un dépôt.")
+            QMessageBox.information(self, "GitMatrix", "Open a repository first.")
             return
         try:
             output = self._repo.pull()
         except GitMatrixError as exc:
-            QMessageBox.critical(self, "Erreur", str(exc))
+            QMessageBox.critical(self, "Error", str(exc))
             return
         self._refresh()
-        self.status.showMessage(f"Pull effectué : {output}", 8000)
+        self.status.showMessage(f"Pull completed: {output}", 8000)
 
     def _open_about(self) -> None:
         AboutDialog(self).exec()
@@ -523,17 +523,17 @@ class MainWindow(QMainWindow):
 
     def _update_status(self, commit=None) -> None:
         if self._repo is None:
-            self._sb_commit.setText("Aucun dépôt ouvert")
+            self._sb_commit.setText("No repository open")
             self._sb_branch.setVisible(False)
             self._sb_dirty.setVisible(False)
             self._sb_staged_w.setVisible(False)
             self._sb_unstaged_w.setVisible(False)
             return
 
-        branch = self._repo.active_branch or "(détaché)"
+        branch = self._repo.active_branch or "(detached)"
         self._sb_branch.setText(branch)
         self._sb_branch.setVisible(True)
-        self._branch_btn.setText(self._repo.active_branch or "Branche")
+        self._branch_btn.setText(self._repo.active_branch or "Branch")
 
         changes = self._repo.changes()
         n_staged = sum(1 for c in changes if c.staged)

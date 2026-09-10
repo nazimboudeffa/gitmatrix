@@ -1,4 +1,4 @@
-"""Boîte de dialogue de commit."""
+"""Commit dialog box."""
 
 from __future__ import annotations
 
@@ -15,23 +15,23 @@ from PySide6.QtWidgets import (
 
 
 class CommitDialog(QDialog):
-    """Saisie d'un message de commit multi-lignes avec compteur + validation."""
+    """Multi-line commit message input with counter + validation."""
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
-        self.setWindowTitle("Créer un commit")
+        self.setWindowTitle("Create a commit")
         self.setMinimumWidth(480)
         self.setMinimumHeight(280)
 
         layout = QVBoxLayout(self)
-        layout.addWidget(QLabel("Message de commit :"))
+        layout.addWidget(QLabel("Commit message:"))
         self._editor = QPlainTextEdit()
-        self._editor.setPlaceholderText("Résumé du changement…")
+        self._editor.setPlaceholderText("Summary of changes…")
         self._editor.textChanged.connect(self._on_text_changed)
         layout.addWidget(self._editor)
 
-        # Compteur de caractères + indication subject/body
-        self._counter = QLabel("0 caractère")
+        # Character counter + subject/body hint
+        self._counter = QLabel("0 character")
         self._counter.setAlignment(Qt.AlignmentFlag.AlignRight)
         self._counter.setObjectName("Counter")
         layout.addWidget(self._counter)
@@ -39,8 +39,8 @@ class CommitDialog(QDialog):
         buttons = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
         )
-        buttons.button(QDialogButtonBox.StandardButton.Ok).setText("Committer")
-        buttons.button(QDialogButtonBox.StandardButton.Cancel).setText("Annuler")
+        buttons.button(QDialogButtonBox.StandardButton.Ok).setText("Commit")
+        buttons.button(QDialogButtonBox.StandardButton.Cancel).setText("Cancel")
         self._ok_btn = buttons.button(QDialogButtonBox.StandardButton.Ok)
         self._ok_btn.setProperty("accent", True)
         self._ok_btn.setEnabled(False)
@@ -59,9 +59,9 @@ class CommitDialog(QDialog):
         subject = text.splitlines()[0] if text.splitlines() else ""
         body = text[len(subject) :].strip()
         n = len(text)
-        lbl = f"{n} caractère{'s' if n > 1 else ''}"
+        lbl = f"{n} character{'s' if n > 1 else ''}"
         if len(subject) > 50:
-            lbl += " — sujet long (50 max conseillé)"
+            lbl += " — long subject (50 chars recommended max)"
         self._counter.setText(lbl)
         # Le bouton n'est activable que si un sujet non vide est présent
         self._ok_btn.setEnabled(bool(subject.strip()))

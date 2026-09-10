@@ -1,4 +1,4 @@
-"""Dialogue « À propos » avec lien Tipeee."""
+"""« About » dialog with Tipeee link."""
 
 from __future__ import annotations
 
@@ -17,7 +17,7 @@ import gitmatrix
 
 # >>> À remplacer par ton lien Tipeee réel <<<
 TIPEEE_URL = "https://fr.tipeee.com/nazimboudeffa"
-TIPEEE_LABEL = "Faire un don sur Tipeee"
+TIPEEE_LABEL = "Support us on Tipeee"
 
 
 class AboutDialog(QDialog):
@@ -25,7 +25,7 @@ class AboutDialog(QDialog):
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
-        self.setWindowTitle("À propos de GitMatrix")
+        self.setWindowTitle("About GitMatrix")
         self.setFixedWidth(380)
 
         layout = QVBoxLayout(self)
@@ -43,8 +43,8 @@ class AboutDialog(QDialog):
         layout.addWidget(version)
 
         desc = QLabel(
-            "Un client Git visuel et léger, pensé comme une alternative "
-            "libre et open-source au clients Git existants."
+            "A lightweight, visual Git client, designed as a free and "
+            "open-source alternative to existing Git clients."
         )
         desc.setWordWrap(True)
         desc.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -62,8 +62,8 @@ class AboutDialog(QDialog):
         link.linkActivated.connect(self._open_tipeee)
         layout.addWidget(link)
 
-        # Bouton de fermeture
-        close_btn = QPushButton("Fermer")
+        # Close button
+        close_btn = QPushButton("Close")
         close_btn.clicked.connect(self.accept)
         row = QHBoxLayout()
         row.addStretch(1)

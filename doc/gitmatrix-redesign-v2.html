@@ -2,7 +2,7 @@
 <html lang="fr"><head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>GitMatrix — Proposition de redesign</title>
+<title>GitMatrix — Redesign Proposal</title>
 <style>
   :root {
     --bg:       oklch(16% 0.012 250);
@@ -587,15 +587,15 @@
   <div class="toolbar-group">
     <button class="toolbar-btn" data-od-id="btn-clone">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path><line x1="12" y1="8" x2="12" y2="14"></line><polyline points="9 11 12 14 15 11"></polyline></svg>
-      Cloner
+      Clone
     </button>
     <button class="toolbar-btn" data-od-id="btn-open">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
-      Ouvrir
+      Open
     </button>
     <button class="toolbar-btn" data-od-id="btn-refresh">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
-      Actualiser
+      Refresh
     </button>
     <button class="toolbar-btn toolbar-btn--branch" data-od-id="btn-branch">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="3" x2="6" y2="15"></line><circle cx="18" cy="6" r="3"></circle><circle cx="6" cy="18" r="3"></circle><path d="M18 9a9 9 0 0 1-9 9"></path></svg>
@@ -645,9 +645,9 @@
     </button>
   </div>
 
-  <button class="toolbar-btn" data-od-id="btn-about">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
-    À propos
+  <button class="toolbar-btn" data-od-id="btn-settings">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+    Settings
   </button>
 </div>
 
@@ -701,11 +701,11 @@
       <div class="empty-logo">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><path d="M21 15l-5-5L5 21"></path></svg>
       </div>
-      <h2>Bienvenue dans GitMatrix</h2>
-      <p>Ouvrez un dépôt Git pour visualiser l'historique, gérer les branches et effectuer des commits.</p>
+      <h2>Welcome to GitMatrix</h2>
+      <p>Open a Git repository to view the history, manage branches, and create commits.</p>
       <button class="empty-btn" id="open-repo-btn">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
-        Ouvrir un dépôt
+        Open a repository
       </button>
     </div>
 
@@ -715,13 +715,13 @@
 
       <!-- Commit detail panel -->
       <div class="commit-detail" id="commit-detail">
-        <button class="detail-close" id="detail-close" aria-label="Fermer">✕</button>
+        <button class="detail-close" id="detail-close" aria-label="Close">✕</button>
         <div class="commit-detail-inner">
           <div class="detail-info">
             <h3 id="detail-subject">Fix: resolve virtual scroll flicker on large repos</h3>
             <div class="detail-meta">
               <span><strong>SHA:</strong> <span id="detail-sha">a3f7b2c</span></span>
-              <span><strong>Auteur:</strong> <span id="detail-author">Nazim Boudeffa</span></span>
+              <span><strong>Author:</strong> <span id="detail-author">Nazim Boudeffa</span></span>
               <span><strong>Date:</strong> <span id="detail-date">2026-09-08</span></span>
               <span id="detail-refs-row"><strong>Refs:</strong> <span id="detail-refs"></span></span>
             </div>
@@ -750,8 +750,8 @@
       <!-- File list -->
       <div class="file-section" data-od-id="file-section">
         <div class="panel-header" style="display:flex; justify-content:space-between; align-items:center;">
-          Modifications
-          <span style="font-size:10px; font-weight:400; text-transform:none; letter-spacing:0;">5 fichiers</span>
+          Changes
+          <span style="font-size:10px; font-weight:400; text-transform:none; letter-spacing:0;">5 files</span>
         </div>
 
         <div class="file-group-header">
@@ -844,7 +844,7 @@
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="3" x2="6" y2="15"></line><circle cx="18" cy="6" r="3"></circle><circle cx="6" cy="18" r="3"></circle><path d="M18 9a9 9 0 0 1-9 9"></path></svg>
     <span id="sb-branch-name">main</span>
   </div>
-  <span class="statusbar-dirty" id="sb-dirty" style="display:none;">● 5 modifications</span>
+  <span class="statusbar-dirty" id="sb-dirty" style="display:none;">● 5 changes</span>
   <span class="statusbar-sep" id="sb-sep" style="display:none;">|</span>
   <span id="sb-commit" style="display:none;"></span>
   <div class="statusbar-right" id="sb-right" style="display:none;">
@@ -857,13 +857,13 @@
       3 unstaged
     </span>
   </div>
-  <span id="sb-empty">Aucun dépôt ouvert</span>
+  <span id="sb-empty">No repository open</span>
 </div>
 
 <!-- ═══ VIEW TOGGLE (demo control) ═══════════════════════════════ -->
 <div class="view-toggle" data-od-id="view-toggle">
-  <button class="active" id="toggle-loaded">Dépôt chargé</button>
-  <button id="toggle-empty">État vide</button>
+  <button class="active" id="toggle-loaded">Repository loaded</button>
+  <button id="toggle-empty">Empty state</button>
 </div>
 
 <script>
@@ -895,7 +895,7 @@
   };
 
   // ── Graph rendering ────────────────────────────────────────────────
-  const ROW_H = 42; // aligné sur ROW_HEIGHT de commit_graph.py
+  const ROW_H = 42; // aligned with ROW_HEIGHT in commit_graph.py
   const COL_W = 28;
   const PAD_X = 24;
   const NODE_R = 8;
@@ -1025,7 +1025,7 @@
     $('#detail-refs').innerHTML = refsHtml || '—';
     $('#detail-refs-row').style.display = c.refs.length ? 'flex' : 'none';
 
-    const diffText = diffs[idx] || '(sélectionnez un fichier pour voir le diff)';
+    const diffText = diffs[idx] || '(select a file to view the diff)';
     const diffHtml = diffText.split('\n').map(l => {
       if (l.startsWith('@@')) return `<div class="diff-hunk">${esc(l)}</div>`;
       if (l.startsWith('+')) return `<div class="diff-add">${esc(l)}</div>`;

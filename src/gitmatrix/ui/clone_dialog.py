@@ -1,4 +1,4 @@
-"""Boîte de dialogue de clonage d'un dépôt distant."""
+"""Dialog for cloning a remote repository."""
 
 from __future__ import annotations
 
@@ -18,29 +18,29 @@ from PySide6.QtWidgets import (
 
 
 class CloneDialog(QDialog):
-    """Saisie d'une URL Git et d'un dossier de destination, puis clonage."""
+    """Enter a Git URL and a destination folder, then clone."""
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
-        self.setWindowTitle("Cloner un dépôt")
+        self.setWindowTitle("Clone a repository")
         self.setMinimumWidth(480)
 
         layout = QVBoxLayout(self)
         form = QFormLayout()
 
         self._url = QLineEdit()
-        self._url.setPlaceholderText("https://github.com/utilisateur/projet.git")
+        self._url.setPlaceholderText("https://github.com/user/repo.git")
         self._url.textChanged.connect(self._on_url_changed)
-        form.addRow("URL du dépôt :", self._url)
+        form.addRow("Repository URL:", self._url)
 
         row = QHBoxLayout()
         self._dest = QLineEdit()
         self._dest.setPlaceholderText(os.path.expanduser("~"))
-        browse = QPushButton("Parcourir…")
+        browse = QPushButton("Browse…")
         browse.clicked.connect(self._browse)
         row.addWidget(self._dest, 1)
         row.addWidget(browse)
-        form.addRow("Emplacement :", row)
+        form.addRow("Location:", row)
 
         layout.addLayout(form)
 
@@ -53,16 +53,16 @@ class CloneDialog(QDialog):
             QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
         )
         self._ok_btn = buttons.button(QDialogButtonBox.StandardButton.Ok)
-        self._ok_btn.setText("Cloner")
+        self._ok_btn.setText("Clone")
         self._ok_btn.setProperty("accent", True)
         self._ok_btn.setEnabled(False)
-        buttons.button(QDialogButtonBox.StandardButton.Cancel).setText("Annuler")
+        buttons.button(QDialogButtonBox.StandardButton.Cancel).setText("Cancel")
         buttons.accepted.connect(self.accept)
         buttons.rejected.connect(self.reject)
         layout.addWidget(buttons)
 
     def _browse(self) -> None:
-        path = QFileDialog.getExistingDirectory(self, "Dossier de destination")
+        path = QFileDialog.getExistingDirectory(self, "Destination folder")
         if path:
             self._dest.setText(path)
 

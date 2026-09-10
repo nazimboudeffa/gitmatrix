@@ -139,7 +139,7 @@ def load_theme(name: str) -> Theme:
                 palette=data.get("palette", []),
                 qss=data.get("qss"),
             )
-    raise FileNotFoundError(f"Thème introuvable : {name}")
+    raise FileNotFoundError(f"Theme not found: {name}")
 
 
 # ---------------------------------------------------------------------------

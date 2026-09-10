@@ -1,4 +1,4 @@
-"""Panneau des branches (aperçu + actions)."""
+"""Branch panel (overview + actions)."""
 
 from __future__ import annotations
 
@@ -66,10 +66,10 @@ class BranchPanel(QListWidget):
             )
             self._add_branch(b, dot, is_active)
 
-        # Branches distantes (affichage seul, non modifiables)
+        # Remote branches (display only, not editable)
         remotes = self._repo.all_remote_branches()
         if remotes:
-            sep = QListWidgetItem("DISTANTES")
+            sep = QListWidgetItem("REMOTES")
             sep.setFlags(Qt.ItemFlag.NoItemFlags)
             sep.setForeground(QColor("#7b61b8"))
             f = QFont(self.font())
@@ -139,36 +139,36 @@ class BranchPanel(QListWidget):
     def _show_menu(self, pos) -> None:
         item = self.itemAt(pos)
         menu = QMenu(self)
-        menu.addAction("Nouvelle branche…", self._new_branch)
+        menu.addAction("New branch…", self._new_branch)
         if item is not None:
             branch = item.data(Qt.ItemDataRole.UserRole)
             if isinstance(branch, RefInfo) and branch.kind == "branch":
                 menu.addAction(
-                    "Basculer (checkout)", lambda: self.branch_checked.emit(branch.name)
+                    "Switch (checkout)", lambda: self.branch_checked.emit(branch.name)
                 )
-                menu.addAction("Supprimer", lambda: self._delete_branch(branch.name))
+                menu.addAction("Delete", lambda: self._delete_branch(branch.name))
         menu.exec(self.mapToGlobal(pos))
 
     def _new_branch(self) -> None:
         if self._repo is None:
             return
-        name, ok = QInputDialog.getText(self, "Nouvelle branche", "Nom de la branche :")
+        name, ok = QInputDialog.getText(self, "New branch", "Branch name:")
         if ok and name.strip():
             try:
                 self._repo.create_branch(name.strip())
                 self.refresh()
             except GitMatrixError as exc:
-                QMessageBox.critical(self, "Erreur", str(exc))
+                QMessageBox.critical(self, "Error", str(exc))
 
     def _delete_branch(self, name: str) -> None:
         res = QMessageBox.question(
             self,
-            "Supprimer la branche",
-            f"Supprimer définitivement la branche « {name} » ?",
+            "Delete branch",
+            f'Permanently delete branch "{name}"?',
         )
         if res == QMessageBox.StandardButton.Yes:
             try:
                 self._repo.delete_branch(name)
                 self.refresh()
             except GitMatrixError as exc:
-                QMessageBox.critical(self, "Erreur", str(exc))
+                QMessageBox.critical(self, "Error", str(exc))

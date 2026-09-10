@@ -73,10 +73,10 @@ class GitRepo:
             self._repo = Repo(path)
         except git.InvalidGitRepositoryError:
             raise GitMatrixError(
-                f"Aucun dépôt git trouvé à : {path}"
+                f"No git repository found at: {path}"
             ) from None
         except git.NoSuchPathError:
-            raise GitMatrixError(f"Chemin invalide : {path}") from None
+            raise GitMatrixError(f"Invalid path: {path}") from None
 
     # ------------------------------------------------------------------
     # Informations générales
@@ -188,7 +188,7 @@ class GitRepo:
                     commits.append(self._commit_info(commit, row))
         except Exception as exc:  # dépôt vide ou erreur
             if self._repo.head.is_valid():
-                raise GitMatrixError(f"Impossible de lire l'historique : {exc}")
+                raise GitMatrixError(f"Could not read history: {exc}")
         return commits
 
     def commit(self, commit: git.Commit) -> CommitInfo:
@@ -231,7 +231,7 @@ class GitRepo:
                 "--porcelain", "-z", "--untracked-files=all"
             )
         except Exception as exc:
-            raise GitMatrixError(f"Impossible de lire l'état du dépôt : {exc}")
+            raise GitMatrixError(f"Could not read repository state: {exc}")
 
         records = raw.split("\0")
         i = 0
@@ -330,7 +330,7 @@ class GitRepo:
             parent = commit.parents[0] if commit.parents else None
             diffs = commit.diff(parent, create_patch=True)
         except Exception as exc:
-            raise GitMatrixError(f"Impossible de lire le diff du commit : {exc}")
+            raise GitMatrixError(f"Could not read commit diff: {exc}")
 
         result: List[FileDiff] = []
         for d in diffs:
@@ -368,7 +368,7 @@ class GitRepo:
         except GitMatrixError:
             raise
         except Exception as exc:
-            raise GitMatrixError(f"Impossible de lire le diff du fichier : {exc}")
+            raise GitMatrixError(f"Could not read file diff: {exc}")
     # ------------------------------------------------------------------
     # Actions
     # ------------------------------------------------------------------
@@ -379,7 +379,7 @@ class GitRepo:
         try:
             self._repo.git.reset("HEAD", "--", path)
         except Exception as exc:
-            raise GitMatrixError(f"Impossible de unstager {path} : {exc}")
+            raise GitMatrixError(f"Could not unstage {path}: {exc}")
 
     def stage_all(self) -> None:
         self._repo.git.add("-A")
@@ -388,13 +388,13 @@ class GitRepo:
         try:
             self._repo.git.reset("HEAD")
         except Exception as exc:
-            raise GitMatrixError(f"Impossible de tout unstager : {exc}")
+            raise GitMatrixError(f"Could not unstage everything: {exc}")
 
     def commit_all(self, message: str) -> str:
         if not message.strip():
-            raise GitMatrixError("Le message de commit ne peut pas être vide.")
+            raise GitMatrixError("The commit message cannot be empty.")
         if not any(c.staged for c in self.changes()):
-            raise GitMatrixError("Aucun changement indexé à commiter.")
+            raise GitMatrixError("No staged changes to commit.")
         try:
             new_commit = self._repo.index.commit(message.strip())
         except Exception as exc:
@@ -405,19 +405,19 @@ class GitRepo:
         try:
             self._repo.create_head(name, base or "HEAD")
         except Exception as exc:
-            raise GitMatrixError(f"Impossible de créer la branche {name} : {exc}")
+            raise GitMatrixError(f"Could not create branch {name}: {exc}")
 
     def delete_branch(self, name: str) -> None:
         try:
             self._repo.delete_head(name, force=True)
         except Exception as exc:
-            raise GitMatrixError(f"Impossible de supprimer la branche {name} : {exc}")
+            raise GitMatrixError(f"Could not delete branch {name}: {exc}")
 
     def checkout(self, name: str) -> None:
         try:
             self._repo.git.checkout(name)
         except Exception as exc:
-            raise GitMatrixError(f"Impossible de basculer sur {name} : {exc}")
+            raise GitMatrixError(f"Could not switch to {name}: {exc}")
 
     @staticmethod
     def clone(url: str, dest: str) -> GitRepo:
@@ -425,7 +425,7 @@ class GitRepo:
         try:
             Repo.clone_from(url, dest)
         except Exception as exc:
-            raise GitMatrixError(f"Impossible de cloner {url} : {exc}")
+            raise GitMatrixError(f"Could not clone {url}: {exc}")
         return GitRepo(dest)
 
     def pull(self) -> str:
@@ -483,9 +483,9 @@ class GitRepo:
         """
         branch = self.active_branch
         if not branch:
-            raise GitMatrixError("Aucune branche active à pousser.")
+            raise GitMatrixError("No active branch to push.")
         if not self.remotes():
-            raise GitMatrixError("Aucun remote configuré pour ce dépôt.")
+            raise GitMatrixError("No remote configured for this repository.")
         try:
             return self._repo.git.push().strip()
         except git.exc.GitCommandError as exc:

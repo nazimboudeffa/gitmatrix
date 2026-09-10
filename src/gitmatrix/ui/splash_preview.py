@@ -21,7 +21,7 @@ def preview_splash(name: str) -> None:
     la main qu'après le clic sur LANCER, dont l'aperçu se ferme.
     """
     splash = create_splash(name)
-    splash.set_progress(1.0, "Prêt")
+    splash.set_progress(1.0, "Ready")
     splash.show()
     loop = QEventLoop()
     splash.launched.connect(loop.quit)

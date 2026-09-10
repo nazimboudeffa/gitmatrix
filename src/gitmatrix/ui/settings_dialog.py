@@ -1,4 +1,4 @@
-"""Dialogue des paramètres du logiciel."""
+"""Application settings dialog."""
 
 from __future__ import annotations
 
@@ -24,23 +24,23 @@ from gitmatrix.ui.splash_screen import DEFAULT_SPLASH, list_splashes
 
 
 class SettingsDialog(QDialog):
-    """Paramètres du logiciel GitMatrix.
+    """GitMatrix settings.
 
-    Choisissez le thème (appliqué immédiatement) et le splash screen
-    (au prochain lancement).  Les thèmes viennent de ``assets/themes``
-    et ``~/.gitmatrix/themes`` ; les splash de ``assets/splashscreens``
-    et ``~/.gitmatrix/splashscreens``.
+    Choose the theme (applied immediately) and the splash screen
+    (at next launch). Themes come from ``assets/themes`` and
+    ``~/.gitmatrix/themes``; splashes from ``assets/splashscreens``
+    and ``~/.gitmatrix/splashscreens``.
     """
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
-        self.setWindowTitle("Paramètres du logiciel")
+        self.setWindowTitle("Software Settings")
         self.setFixedWidth(440)
 
         layout = QVBoxLayout(self)
         layout.setSpacing(14)
 
-        title = QLabel("Paramètres du logiciel")
+        title = QLabel("Software Settings")
         title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         title.setStyleSheet("font-size: 20px; font-weight: bold; color: #e5c07b;")
         layout.addWidget(title)
@@ -50,8 +50,8 @@ class SettingsDialog(QDialog):
         version.setStyleSheet("color: #9da5b4;")
         layout.addWidget(version)
 
-        # --- Thème -----------------------------------------------------
-        layout.addWidget(self._label("Thème"))
+        # --- Theme -----------------------------------------------------
+        layout.addWidget(self._label("Theme"))
         self._theme_combo = QComboBox()
         self._theme_combo.addItems(list_themes())
         self._theme_combo.setCurrentText(current_theme_name())
@@ -60,7 +60,7 @@ class SettingsDialog(QDialog):
 
         layout.addWidget(
             self._hint(
-                "Ajoutez des thèmes dans ~/.gitmatrix/themes (fichiers JSON)."
+                "Add themes in ~/.gitmatrix/themes (JSON files)."
             )
         )
 
@@ -75,8 +75,8 @@ class SettingsDialog(QDialog):
         if cached in list_splashes():
             self._splash_combo.setCurrentText(cached)
         self._splash_combo.currentTextChanged.connect(self._on_splash_changed)
-        preview_btn = QPushButton("Aperçu")
-        preview_btn.setToolTip("Voir le splash en plein écran, sans redémarrer.")
+        preview_btn = QPushButton("Preview")
+        preview_btn.setToolTip("Preview the splash full screen without restarting.")
         preview_btn.clicked.connect(self._on_preview_clicked)
         row.addWidget(self._splash_combo, 1)
         row.addWidget(preview_btn)
@@ -84,14 +84,14 @@ class SettingsDialog(QDialog):
 
         layout.addWidget(
             self._hint(
-                "Ajoutez des splash screens dans "
-                "~/.gitmatrix/splashscreens (fichiers JSON).\n"
-                "Le changement s'applique au prochain lancement ; "
-                "cliquez sur « Aperçu » pour voir le rendu."
+                "Add splash screens in ~/.gitmatrix/splashscreens "
+                "(JSON files).\n"
+                "The change applies at next launch; click "
+                "\u201cPreview\u201d to see the result."
             )
         )
 
-        self._splash_enabled = QCheckBox("Activer le splash screen au démarrage")
+        self._splash_enabled = QCheckBox("Enable splash screen on startup")
         self._splash_enabled.setChecked(
             QSettings().value("enable_splash", True, type=bool)
         )
@@ -100,7 +100,7 @@ class SettingsDialog(QDialog):
         )
         layout.addWidget(self._splash_enabled)
 
-        close_btn = QPushButton("Fermer")
+        close_btn = QPushButton("Close")
         close_btn.clicked.connect(self.accept)
         row = QHBoxLayout()
         row.addStretch(1)

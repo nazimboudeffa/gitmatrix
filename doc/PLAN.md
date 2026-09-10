@@ -102,13 +102,16 @@ s'intercale entre les phases fonctionnelles — chaque version doit embarquer
 - [x] Gauge de progression liée au chargement réel (pas de timer cosmétique)
 - [x] Bouton « Lancer » (apparaît à 100 %, l'animation continue)
 - [x] Clic n'importe où = skip
+- [x] Message intégré au splash qui se « décrypte » cellule par cellule (glyphes aléatoires → texte clair, en haut à gauche)
 
 ### Système de thèmes et de splash screens (fait, v0.3.1)
 - [x] **Thèmes** chargés en JSON depuis `assets/themes` + `~/.gitmatrix/themes` (tokens + palette, template QSS généré, override complet possible)
-- [x] **Splash screens** configurés en JSON depuis `assets/splashscreens` + `~/.gitmatrix/splashscreens` (couleurs, caractères, densité, vitesse)
+- [x] **Splash screens** configurés en JSON depuis `assets/splashscreens` + `~/.gitmatrix/splashscreens` (couleurs, caractères, densité, vitesse, message)
 - [x] 3 thèmes prédéfinis : Nightfall (défaut), Matrix Void, Daylight
 - [x] 3 splash prédéfinis : Matrix Rain (défaut), Gold Rain, Minimal
 - [x] Paramètres : sélecteurs thème + splash, persistés via `QSettings`, thème appliqué à chaud
+- [x] Aperçu du splash en plein écran depuis les paramètres, sans redémarrer (fenêtre de paramètres non-modale)
+- [x] Option « Activer le splash au démarrage » (désactivable, persistée via `QSettings`)
 - [ ] Nouveaux thèmes/splash : documenter le format JSON (exemples + guide)
 
 ### Effets visuels — à faire
@@ -129,7 +132,7 @@ s'intercale entre les phases fonctionnelles — chaque version doit embarquer
 - Support plugins (scripts externes dans le menu contextuel)
 - Export du graphe en image/PDF
 - Mode « GitKraken look » : filtre de branche animé, courbes douces
-- i18n : anglais/français (fichiers de traduction Qt `.ts`)
+- i18n : ~~anglais/français~~ (abandonné) — interface unilingue en **anglais**, traduite complètement ; le français reste réservé aux documents et aux commentaires du code
 - Préférences persistantes (`QSettings`) enrichies : colonnes, repo récent
   (thème + splash déjà persistés)
 

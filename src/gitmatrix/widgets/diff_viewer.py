@@ -37,7 +37,7 @@ class DiffViewer(QPlainTextEdit):
         mono.setPointSize(9)
         mono.setLetterSpacing(QFont.SpacingType.AbsoluteSpacing, 0.2)
         self.setFont(mono)
-        self.setPlaceholderText("Sélectionnez un fichier pour voir son diff.")
+        self.setPlaceholderText("Select a file to see its diff.")
 
     def show_diff(self, diff: Optional[FileDiff], title: Optional[str] = None) -> None:
         """Affiche un FileDiff ; ``title`` optionnel pour l'en-tête de fichier."""
@@ -53,7 +53,7 @@ class DiffViewer(QPlainTextEdit):
             self._line(cursor, "", "ctx")
             self._line(
                 cursor,
-                "(aucun contenu textuel à afficher — fichier binaire ou vide)",
+                "(no text content to show — binary or empty file)",
                 "meta",
             )
         else:
