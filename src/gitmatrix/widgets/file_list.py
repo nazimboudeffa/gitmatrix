@@ -1,4 +1,8 @@
-"""Liste des fichiers modifiés (staging / unstaging visuel)."""
+"""Liste des fichiers modifiés (staging / unstaging visuel).
+
+Deux sections distinctes dans le panneau de droite : **Staged** (indexée) et
+**Unstaged** (arbre de travail), chacune avec son compteur.
+"""
 
 from __future__ import annotations
 
@@ -6,20 +10,27 @@ from typing import List, Optional
 
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QColor, QBrush, QFont
-from PySide6.QtWidgets import QTreeWidget, QTreeWidgetItem, QMenu, QHeaderView
+from PySide6.QtWidgets import (
+    QWidget,
+    QVBoxLayout,
+    QHBoxLayout,
+    QLabel,
+    QTreeWidget,
+    QTreeWidgetItem,
+    QMenu,
+    QHeaderView,
+    QSplitter,
+)
 
-from gitmatrix.core.git_repo import FileChange, FileDiff
+from gitmatrix.core.git_repo import FileChange
 
 
-class FileListWidget(QTreeWidget):
-    """Affiche les fichiers staged et unstaged avec actions contextuelles."""
+class FileListWidget(QWidget):
+    """Deux listes (staged / unstaged) avec actions contextuelles par fichier."""
 
     file_activated = Signal(object)  # FileChange (double-clic → ouvre un diff)
-    commit_file_selected = Signal(object)  # FileDiff (mode "commit")
     stage_requested = Signal(object)  # FileChange
     unstage_requested = Signal(object)  # FileChange
-    stage_all_requested = Signal()
-    unstage_all_requested = Signal()
 
     # (couleur, fond translucide, lettre)
     STATUS_STYLE = {
@@ -33,111 +44,108 @@ class FileListWidget(QTreeWidget):
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
-        self.setHeaderLabels(["File", ""])
-        self.header().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
-        self.header().setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
-        self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
-        self.customContextMenuRequested.connect(self._show_menu)
-        self.itemDoubleClicked.connect(self._on_double_clicked)
-        self._commit_mode: Optional[str] = None  # sha court en mode "fichiers d'un commit"
+
+        self._staged_section, self._staged_list = self._section("Staged")
+        self._unstaged_section, self._unstaged_list = self._section("Unstaged")
+
+        self._splitter = QSplitter(Qt.Orientation.Vertical, self)
+        self._splitter.setChildrenCollapsible(False)
+        self._splitter.setHandleWidth(6)
+        self._splitter.addWidget(self._staged_section)
+        self._splitter.addWidget(self._unstaged_section)
+
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(self._splitter)
+
+        self._splitter.setStretchFactor(0, 1)
+        self._splitter.setStretchFactor(1, 1)
 
     # ------------------------------------------------------------------
     def set_changes(self, changes: List[FileChange]) -> None:
-        """Mode working tree (normal)."""
-        self._commit_mode = None
-        self.clear()
-        grouped: dict = {"staged": [], "unstaged": []}
+        """Remplit les deux sections depuis la liste des changements."""
+        staged = [c for c in changes if c.staged]
+        unstaged = [c for c in changes if not c.staged]
+        self._fill(self._staged_list, staged)
+        self._fill(self._unstaged_list, unstaged)
+
+    def _section(self, label: str) -> tuple:
+        """Bloc section (en-tête + liste), hauteur égale pour chaque section."""
+        w = QWidget()
+        lay = QVBoxLayout(w)
+        lay.setContentsMargins(0, 0, 0, 0)
+        lay.setSpacing(6)
+        lay.addWidget(self._group_header(label))
+        tree = self._make_list()
+        lay.addWidget(tree, 1)
+        return w, tree
+
+    def _group_header(self, label: str) -> QLabel:
+        lbl = QLabel(label.upper())
+        lbl.setObjectName("GroupHeader")
+        return lbl
+
+    def _make_list(self) -> QTreeWidget:
+        tree = QTreeWidget()
+        tree.setHeaderLabels(["File", ""])
+        tree.setRootIsDecorated(False)
+        tree.header().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
+        tree.header().setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
+        tree.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        tree.customContextMenuRequested.connect(self._show_menu)
+        tree.itemDoubleClicked.connect(self._on_double_clicked)
+        return tree
+
+    def _fill(self, tree: QTreeWidget, changes: List[FileChange]) -> None:
+        tree.clear()
         for c in changes:
-            grouped["staged" if c.staged else "unstaged"].append(c)
-
-        for key, label in (("staged", "Staged"), ("unstaged", "Changes")):
-            group = grouped[key]
-            root = QTreeWidgetItem([f"{label}  "])
-            self._style_group_header(root, label, len(group))
-            for c in group:
-                root.addChild(self._change_item(c))
-            self.addTopLevelItem(root)
-            root.setExpanded(True)
-            root.setFlags(Qt.ItemFlag.ItemIsEnabled)
-
-    def set_commit_files(self, diffs: List[FileDiff], short_sha: str) -> None:
-        """Mode « fichiers modifiés par un commit » (lecture seule)."""
-        self._commit_mode = short_sha
-        self.clear()
-        root = QTreeWidgetItem([f"Commit {short_sha}"])
-        self._style_group_header(root, f"Commit {short_sha}", len(diffs))
-        for d in diffs:
-            item = QTreeWidgetItem([d.path, ""])
-            status = "D" if d.is_deleted else ("A" if d.is_new else "M")
-            color, bg, _ = self.STATUS_STYLE.get(status, ("#d7dae0", QColor(0, 0, 0, 0), "?"))
-            self._decorate(item, color, bg, status)
-            item.setData(0, Qt.ItemDataRole.UserRole, d)
-            root.addChild(item)
-        self.addTopLevelItem(root)
-        root.setExpanded(True)
-        root.setFlags(Qt.ItemFlag.ItemIsEnabled)
-
-    def _style_group_header(self, root: QTreeWidgetItem, label: str, count: int) -> None:
-        root.setText(0, f"{label}")
-        font = QFont(self.font())
-        font.setPointSize(9)
-        font.setBold(True)
-        root.setFont(0, font)
-        root.setForeground(0, QBrush(QColor("#9da5b4")))
-        if count:
-            root.setText(1, f" {count} ")
-
-    def _change_item(self, c: FileChange) -> QTreeWidgetItem:
-        item = QTreeWidgetItem([c.path, ""])
-        color, bg, letter = self.STATUS_STYLE.get(
-            c.status, ("#d7dae0", QColor(0, 0, 0, 0), c.status or "?")
-        )
-        self._decorate(item, color, bg, letter)
-        item.setData(0, Qt.ItemDataRole.UserRole, c)
-        return item
-
-    def _decorate(self, item: QTreeWidgetItem, color: QColor, bg: QColor, letter: str) -> None:
-        item.setForeground(1, QBrush(color))
-        status_font = QFont(self.font())
-        status_font.setBold(True)
-        item.setFont(1, status_font)
-        item.setText(1, letter)
-        item.setBackground(1, QBrush(bg))
-        item.setData(1, Qt.ItemDataRole.UserRole, letter)
+            item = QTreeWidgetItem([c.path, ""])
+            color, bg, letter = self.STATUS_STYLE.get(
+                c.status, ("#d7dae0", QColor(0, 0, 0, 0), c.status or "?")
+            )
+            item.setForeground(1, QBrush(color))
+            status_font = QFont(self.font())
+            status_font.setBold(True)
+            item.setFont(1, status_font)
+            item.setText(1, letter)
+            item.setBackground(1, QBrush(bg))
+            item.setData(0, Qt.ItemDataRole.UserRole, c)
+            tree.addTopLevelItem(item)
 
     def _current_file(self) -> Optional[FileChange]:
-        item = self.currentItem()
+        tree = self.sender()
+        if not isinstance(tree, QTreeWidget):
+            return None
+        item = tree.currentItem()
         if item is None:
             return None
         data = item.data(0, Qt.ItemDataRole.UserRole)
         return data if isinstance(data, FileChange) else None
 
-    def _current_diff(self) -> Optional[FileDiff]:
-        item = self.currentItem()
-        if item is None:
-            return None
-        data = item.data(0, Qt.ItemDataRole.UserRole)
-        return data if isinstance(data, FileDiff) else None
-
     def _on_double_clicked(self, item, column) -> None:
         data = item.data(0, Qt.ItemDataRole.UserRole)
         if isinstance(data, FileChange):
             self.file_activated.emit(data)
-        elif isinstance(data, FileDiff):
-            self.commit_file_selected.emit(data)
 
     def _show_menu(self, pos) -> None:
-        file_change = self._current_file()
+        tree = self.sender()
+        if not isinstance(tree, QTreeWidget):
+            return
+        item = tree.itemAt(pos)
+        if item is None:
+            return
+        file_change = item.data(0, Qt.ItemDataRole.UserRole)
+        if not isinstance(file_change, FileChange):
+            return
         menu = QMenu(self)
-        if file_change is not None and self._commit_mode is None:
-            if file_change.staged:
-                a = menu.addAction("Unstage")
-                a.triggered.connect(
-                    lambda _=False, fc=file_change: self.unstage_requested.emit(fc)
-                )
-            else:
-                a = menu.addAction("Stage")
-                a.triggered.connect(
-                    lambda _=False, fc=file_change: self.stage_requested.emit(fc)
-                )
-        menu.exec(self.viewport().mapToGlobal(pos))
+        if file_change.staged:
+            a = menu.addAction("Unstage")
+            a.triggered.connect(
+                lambda _=False, fc=file_change: self.unstage_requested.emit(fc)
+            )
+        else:
+            a = menu.addAction("Stage")
+            a.triggered.connect(
+                lambda _=False, fc=file_change: self.stage_requested.emit(fc)
+            )
+        menu.exec(tree.viewport().mapToGlobal(pos))

@@ -483,6 +483,19 @@ QLabel#HeaderCount {
     font-family: "Cascadia Mono", "JetBrains Mono", "Consolas", monospace;
 }
 
+/* En-tête de section (Staged / Unstaged) */
+QLabel#GroupHeader {
+    font-family: "Cascadia Mono", "JetBrains Mono", "Consolas", monospace;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: {muted};
+    background-color: transparent;
+    border: none;
+    padding: 2px 0 0;
+}
+
 /* Status bar : texte principal */
 QStatusBar QLabel#StatusBarText {
     color: {muted};

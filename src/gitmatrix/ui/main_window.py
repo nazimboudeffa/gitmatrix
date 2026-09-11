@@ -24,7 +24,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtGui import QIcon, QKeySequence, QAction, QShortcut
 
-from gitmatrix.core.git_repo import GitMatrixError, GitRepo, FileChange, FileDiff
+from gitmatrix.core.git_repo import GitMatrixError, GitRepo, FileChange
 from gitmatrix.theme import current_qss, themeChanged
 from gitmatrix.widgets.commit_graph import CommitGraphWidget
 from gitmatrix.widgets.file_list import FileListWidget
@@ -51,7 +51,6 @@ class MainWindow(QMainWindow):
         self.setStyleSheet(current_qss())
 
         self._repo: Optional[GitRepo] = None
-        self._commit_mode_sha: Optional[str] = None
 
         # ------------------------------------------------------------------
         # Widgets centraux
@@ -146,11 +145,8 @@ class MainWindow(QMainWindow):
         self.commit_graph.commit_selected.connect(self._on_commit_selected)
         self.commit_graph.commit_activated.connect(self._open_commit_detail)
         self.files.file_activated.connect(self._open_file_diff)
-        self.files.commit_file_selected.connect(self._on_commit_file_selected)
         self.files.stage_requested.connect(self._stage_file)
         self.files.unstage_requested.connect(self._unstage_file)
-        self.files.stage_all_requested.connect(self._stage_all)
-        self.files.unstage_all_requested.connect(self._unstage_all)
         self.branches.branch_checked.connect(self._checkout_branch)
         themeChanged.connect(self._on_theme_changed)
 
@@ -396,7 +392,6 @@ class MainWindow(QMainWindow):
             return False
         self._repo = repo
         self.branches.set_repo(repo)
-        self._commit_mode_sha = None
         self._set_actions_enabled(True)
         self._refresh()
         return True
@@ -449,17 +444,6 @@ class MainWindow(QMainWindow):
             return
         dialog = CommitDetailDialog(commit, diffs, self)
         dialog.exec()
-
-    def _on_commit_file_selected(self, file_diff: FileDiff) -> None:
-        if self._repo is None or self._commit_mode_sha is None:
-            return
-        try:
-            found = self._repo.diff_commit_file(self._commit_mode_sha, file_diff.path)
-        except GitMatrixError as exc:
-            QMessageBox.warning(self, "Error", str(exc))
-            return
-        header = f"{self._commit_mode_sha[:8]} · {file_diff.path}"
-        DiffDialog(found, header, self).exec()
 
     def _open_file_diff(self, file_change: FileChange) -> None:
         """Double-clic sur un fichier : ouvre son diff dans une fenêtre."""
