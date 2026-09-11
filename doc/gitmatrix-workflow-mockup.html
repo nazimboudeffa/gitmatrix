@@ -1,0 +1,1122 @@
+<!doctype html>
+<html lang="fr" data-theme="nuit">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GitMatrix — Maquette du flux Git typique</title>
+<style>
+  :root{
+    --bg:      oklch(98% 0.005 250);
+    --surface: oklch(100% 0 0);
+    --fg:      oklch(22% 0.02 240);
+    --muted:   oklch(50% 0.018 240);
+    --border:  oklch(90% 0.008 240);
+    --accent:  oklch(58% 0.16 145);
+    --font-display:-apple-system,BlinkMacSystemFont,"Inter","Segoe UI",system-ui,sans-serif;
+    --font-body:   -apple-system,BlinkMacSystemFont,"Inter","Segoe UI",system-ui,sans-serif;
+    --font-mono:   "Cascadia Code","JetBrains Mono","IBM Plex Mono",ui-monospace,Menlo,monospace;
+
+    --lane0: oklch(62% 0.14 255);
+    --lane1: oklch(64% 0.13 310);
+    --lane2: oklch(66% 0.14 70);
+    --add:    oklch(72% 0.14 150);
+    --del:    oklch(68% 0.16 25);
+    --gold:   oklch(78% 0.15 90);
+    --radius: 10px;
+  }
+  html[data-theme="nuit"]{
+    --bg:      oklch(16% 0.012 250);
+    --surface: oklch(21% 0.014 250);
+    --surface2:oklch(24% 0.014 250);
+    --fg:      oklch(93% 0.008 250);
+    --muted:   oklch(66% 0.012 250);
+    --border:  oklch(31% 0.014 250);
+    --accent:  oklch(72% 0.15 148);
+    --shadow:  0 24px 70px oklch(0% 0 0 / 0.5);
+  }
+  html[data-theme="matrice"]{
+    --bg:      oklch(9% 0.02 150);
+    --surface: oklch(13% 0.022 150);
+    --surface2:oklch(16% 0.024 150);
+    --fg:      oklch(92% 0.04 150);
+    --muted:   oklch(62% 0.06 150);
+    --border:  oklch(26% 0.05 150);
+    --accent:  oklch(78% 0.2 148);
+    --lane0: oklch(66% 0.16 150);
+    --lane1: oklch(68% 0.15 310);
+    --lane2: oklch(70% 0.15 70);
+    --shadow: 0 24px 70px oklch(0% 0 0 / 0.6);
+  }
+  html[data-theme="jour"]{
+    --bg:      oklch(96% 0.006 250);
+    --surface: oklch(99% 0 0);
+    --surface2:oklch(94% 0.006 250);
+    --fg:      oklch(24% 0.02 240);
+    --muted:   oklch(50% 0.018 240);
+    --border:  oklch(88% 0.01 240);
+    --accent:  oklch(50% 0.15 148);
+    --lane0: oklch(55% 0.14 255);
+    --lane1: oklch(56% 0.13 310);
+    --lane2: oklch(58% 0.14 70);
+    --shadow: 0 24px 70px oklch(30% 0.02 250 / 0.25);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    font-family:var(--font-body);
+    color:var(--fg);
+    background:
+      radial-gradient(1200px 600px at 50% -10%, color-mix(in oklch, var(--accent) 12%, transparent), transparent 60%),
+      var(--bg);
+    display:flex;align-items:center;justify-content:center;
+    padding:12px;
+    -webkit-font-smoothing:antialiased;
+  }
+  button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+  ::selection{background:color-mix(in oklch,var(--accent) 35%, transparent)}
+  :focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+
+  .window{
+    width:min(1460px,100%);
+    height:min(900px, calc(100vh - 24px));
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:14px;
+    box-shadow:var(--shadow);
+    display:grid;
+    grid-template-rows:44px auto 64px minmax(0,1fr) 34px;
+    overflow:hidden;
+  }
+
+  /* ---------- Title bar ---------- */
+  .titlebar{
+    display:flex;align-items:center;gap:12px;
+    padding:0 10px 0 16px;
+    border-bottom:1px solid var(--border);
+    background:var(--surface);
+  }
+  .appname{font-weight:700;font-size:14px;letter-spacing:-0.01em}
+  .appname b{color:var(--accent)}
+  .version{font-family:var(--font-mono);font-size:10.5px;color:var(--muted);margin-top:1px}
+  .repopath{
+    margin-left:6px;min-width:0;flex:1;display:flex;align-items:center;gap:8px;
+    font-family:var(--font-mono);font-size:11.5px;color:var(--muted);
+    border:1px solid var(--border);background:var(--surface2);
+    padding:6px 10px;border-radius:8px;
+  }
+  .repopath .sep{opacity:.5}
+  .repopath .dirty-dot{width:8px;height:8px;border-radius:50%;background:var(--accent);flex:none;box-shadow:0 0 0 3px color-mix(in oklch,var(--accent) 18%, transparent)}
+  .winbtns{display:flex;gap:2px}
+  .winbtns button{
+    width:40px;height:34px;display:grid;place-items:center;border-radius:8px;color:var(--muted);
+  }
+  .winbtns button:hover{background:var(--surface2);color:var(--fg)}
+  .winbtns button.close:hover{background:oklch(60% 0.2 25);color:oklch(98% 0.008 250)}
+
+  /* ---------- Toolbar ---------- */
+  .toolbar{
+    display:flex;align-items:center;gap:8px;
+    padding:6px 12px;
+    border-bottom:1px solid var(--border);
+    background:var(--surface);
+    position:relative;
+  }
+  .tzone{display:flex;align-items:center;gap:6px}
+  .tzone .divider{width:1px;height:28px;background:var(--border);margin:0 6px}
+  .tbtn{
+    display:inline-flex;align-items:center;gap:7px;
+    min-height:44px;padding:0 13px;border-radius:9px;
+    font-size:13px;font-weight:600;color:var(--fg);
+    border:1px solid transparent;
+    transition:background .12s ease, border-color .12s ease, transform .05s ease;
+  }
+  .tbtn svg{width:16px;height:16px}
+  .tbtn:hover{background:var(--surface2);border-color:var(--border)}
+  .tbtn:active{transform:translateY(1px)}
+  .tbtn[disabled]{opacity:.5;pointer-events:none}
+  .tbtn.primary{
+    background:var(--accent);
+    color:oklch(16% 0.03 148);
+    box-shadow:0 2px 0 color-mix(in oklch,var(--accent) 55%, var(--bg));
+  }
+  .tbtn.primary:hover{background:color-mix(in oklch, var(--accent) 88%, white);border-color:transparent}
+  .tbtn.ghost{border-color:var(--border);background:var(--surface2);color:var(--fg)}
+  .tbtn.ghost:hover{background:color-mix(in oklch, var(--accent) 12%, var(--surface2));border-color:color-mix(in oklch, var(--accent) 40%, var(--border))}
+  .tbtn .spin{width:15px;height:15px;border:2px solid transparent;border-top-color:currentColor;border-radius:50%;animation:spin .7s linear infinite;display:none}
+  .tbtn.loading .spin{display:block}
+  .tbtn.loading .ico{display:none}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  .branchsel{
+    display:inline-flex;align-items:center;gap:9px;
+    min-height:44px;padding:0 6px 0 12px;border-radius:9px;
+    border:1px solid var(--border);background:var(--surface2);
+    font-size:13px;font-weight:600;cursor:pointer;
+  }
+  .branchsel .dot{width:9px;height:9px;border-radius:50%;background:var(--gold);box-shadow:0 0 0 3px color-mix(in oklch,var(--gold) 22%, transparent)}
+  .branchsel .caret{color:var(--muted)}
+
+  /* ---------- Workflow bar (centre de commande) ---------- */
+  .workflow{
+    display:flex;align-items:stretch;gap:0;
+    padding:8px 12px;
+    border-bottom:1px solid var(--border);
+    background:var(--surface);
+  }
+  .wseg{
+    flex:1;min-width:0;display:flex;align-items:center;gap:11px;
+    padding:10px 14px;border-radius:11px;
+    border:1px solid transparent;
+  }
+  .wseg.clickable{cursor:pointer}
+  .wseg.clickable:hover{background:var(--surface2);border-color:var(--border)}
+  .wkey{
+    width:26px;height:26px;border-radius:50%;flex:none;
+    display:grid;place-items:center;
+    font-family:var(--font-mono);font-size:12px;font-weight:700;
+    border:1.5px solid var(--border);color:var(--muted);
+    transition:.15s;
+  }
+  .wbody{flex:1;min-width:0}
+  .wtitle{font-size:13px;font-weight:700;color:var(--muted)}
+  .wsub{font-size:11px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .wbtn{
+    flex:none;min-height:42px;padding:0 15px;border-radius:9px;
+    display:inline-flex;align-items:center;gap:8px;
+    font-size:12.5px;font-weight:700;background:var(--surface2);
+    border:1px solid var(--border);color:var(--fg);
+    box-shadow:0 1px 0 color-mix(in oklch, var(--bg) 55%, transparent);
+    transition:background .12s ease, border-color .12s ease, filter .12s ease;
+  }
+  .wbtn svg{width:15px;height:15px}
+  .wbtn:hover{background:color-mix(in oklch, var(--accent) 12%, var(--surface2));border-color:color-mix(in oklch, var(--accent) 42%, var(--border))}
+  .wbtn.primary{background:var(--accent);border-color:var(--accent);color:oklch(16% 0.03 148);box-shadow:0 2px 0 color-mix(in oklch,var(--accent) 55%, var(--bg))}
+  .wbtn.primary:hover{background:color-mix(in oklch, var(--accent) 88%, white)}
+  .wbtn[disabled]{opacity:.42;pointer-events:none;filter:grayscale(.35)}
+  .wicon{
+    flex:none;width:42px;min-height:42px;border-radius:9px;
+    display:inline-flex;align-items:center;justify-content:center;
+    background:transparent;color:var(--muted);cursor:pointer;
+    transition:background .12s ease, color .12s ease;
+  }
+  .wicon svg{width:16px;height:16px}
+  .wicon:hover{background:var(--surface2);color:var(--fg)}
+  .wicon .spin,.wicon .ico{display:none}
+  .wicon .ico{display:block}
+  .wicon.loading .ico{display:none}
+  .wicon.loading .spin{display:block}
+  .wicon .spin{width:16px;height:16px;border:2px solid transparent;border-top-color:currentColor;border-radius:50%;animation:spin .7s linear infinite}
+  .wlink{width:26px;height:1px;background:var(--border);margin:0 4px;align-self:center;flex:none;position:relative}
+  .wlink.done{background:var(--accent)}
+  .wlink.done::after{content:"";position:absolute;right:-2px;top:-2.5px;width:6px;height:6px;border-radius:50%;background:var(--accent)}
+  .wseg.done .wkey{background:var(--accent);border-color:var(--accent);color:oklch(16% 0.03 148)}
+  .wseg.done .wtitle{color:var(--fg)}
+  .wseg.active{background:color-mix(in oklch,var(--accent) 7%, var(--surface));border-color:color-mix(in oklch,var(--accent) 45%, var(--border));box-shadow:inset 0 0 0 1px color-mix(in oklch,var(--accent) 14%, transparent)}
+  .wseg.active .wkey{border-color:var(--accent);color:var(--accent)}
+  .wseg.active .wtitle{color:var(--accent)}
+  .wseg.waiting .wkey{opacity:.55}
+  .wseg p.hint{display:none}
+  @keyframes pulse{0%,100%{box-shadow:0 0 0 3px color-mix(in oklch,var(--accent) 12%, transparent)}50%{box-shadow:0 0 0 6px color-mix(in oklch,var(--accent) 20%, transparent)}}
+
+  /* ---------- Main 3-pane grid ---------- */
+  .main{display:grid;grid-template-columns:280px minmax(0,1fr) 460px;min-height:0}
+  .panel{min-height:0;display:flex;flex-direction:column;background:var(--surface)}
+  .panel + .panel{border-left:1px solid var(--border)}
+
+  .phead{
+    display:flex;align-items:center;gap:8px;
+    padding:12px 14px 10px;
+  }
+  .phead h2{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);flex:1}
+  .phead .count{
+    font-family:var(--font-mono);font-size:11px;font-weight:600;
+    color:var(--muted);background:var(--surface2);
+    border:1px solid var(--border);padding:1px 7px;border-radius:99px;
+  }
+
+  /* ---------- Branches ---------- */
+  .branchsearch{margin:0 12px 8px;display:flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:0 10px}
+  .branchsearch svg{width:14px;height:14px;color:var(--muted);flex:none}
+  .branchsearch input{flex:1;border:0;background:none;outline:none;color:var(--fg);font-size:12.5px;padding:9px 0}
+  .branches{flex:1;overflow:auto;padding:0 8px 12px}
+  .bsection{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);padding:12px 8px 6px}
+  .brow{
+    display:flex;align-items:center;gap:10px;
+    width:100%;padding:0 10px;min-height:38px;border-radius:8px;text-align:left;
+    font-size:13px;font-weight:600;
+  }
+  .brow:hover{background:var(--surface2)}
+  .brow.active{background:color-mix(in oklch,var(--gold) 12%, var(--surface2));box-shadow:inset 2px 0 0 var(--gold)}
+  .brow.active .bname{color:var(--fg)}
+  .brow .bname{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .brow .dot{width:9px;height:9px;border-radius:50%;flex:none}
+  .brow .ahead{font-family:var(--font-mono);font-size:10.5px;color:var(--muted);background:var(--surface2);border:1px solid var(--border);padding:1px 6px;border-radius:99px;flex:none}
+  .brow .ahead.merge{color:color-mix(in oklch,var(--lane1) 80%, var(--fg))}
+
+  /* ---------- Commit graph ---------- */
+  .graphwrap{display:flex;flex-direction:column;min-width:0}
+  .graph{flex:1;overflow:auto;position:relative}
+  .draftcard{
+    margin:14px 16px 0 16px;padding:11px 14px;border:1.5px dashed color-mix(in oklch,var(--accent) 55%, var(--border));
+    border-radius:10px;background:color-mix(in oklch,var(--accent) 7%, var(--surface));
+    display:flex;align-items:center;gap:10px;
+  }
+  .draftcard .dot{width:9px;height:9px;border-radius:50%;background:var(--accent);flex:none;animation:pulse 2s ease-in-out infinite}
+  .draftcard .dtxt{font-size:12.5px;font-weight:600}
+  .draftcard .dsub{font-size:11px;color:var(--muted);margin-top:1px}
+  .draftcard .drafting{margin-left:auto;font-size:11px;font-weight:700;color:var(--muted);white-space:nowrap}
+  .draftline{position:absolute;left:32px;top:0;width:2px;border-left:2px dashed color-mix(in oklch,var(--accent) 55%, transparent);pointer-events:none}
+  .crow{display:flex;align-items:stretch;min-height:44px;position:relative}
+  .crow .csvg{width:128px;flex:none;height:44px}
+  .crow .l{stroke:currentColor;stroke-width:2.4;fill:none}
+  .crow .v{stroke:currentColor;stroke-width:2;fill:none;opacity:.9}
+  .crow .elbow{stroke:currentColor;stroke-width:2;fill:none}
+  .crow .node{stroke:var(--surface);stroke-width:2.5}
+  .crow .node.merge{stroke-width:2}
+  .crow .cmeta{
+    flex:1;min-width:0;padding:6px 14px 5px 6px;cursor:pointer;border-radius:0 8px 8px 0;
+    border-left:0;
+  }
+  .crow .cmeta:hover{background:var(--surface2)}
+  .crow .cmeta.sel{background:color-mix(in oklch,var(--accent) 12%, var(--surface2))}
+  .crow .cmeta.sel .cmsg{color:var(--fg)}
+  .cmsg{font-size:13px;font-weight:600;color:var(--fg);display:flex;align-items:center;gap:8px;min-width:0}
+  .cmsg .txt{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .refs{display:inline-flex;gap:5px;flex:none}
+  .ref{
+    font-family:var(--font-mono);font-size:9.5px;font-weight:700;letter-spacing:.02em;
+    padding:1.5px 6px;border-radius:5px;white-space:nowrap;
+    color:oklch(16% 0.03 148);
+  }
+  .ref.head{background:var(--gold);color:oklch(20% 0.03 70)}
+  .ref.br{background:color-mix(in oklch,var(--lane1) 70%, white);color:oklch(18% 0.02 300)}
+  .ref.remote{background:color-mix(in oklch,var(--lane1) 60%, white);color:oklch(18% 0.02 300)}
+  .ref.tag{background:var(--surface2);color:var(--muted);border:1px solid var(--border)}
+  .csub{font-family:var(--font-mono);font-size:10.5px;color:var(--muted);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .csub .sha{color:color-mix(in oklch,var(--muted) 85%, var(--fg))}
+  .graphend{text-align:center;font-family:var(--font-mono);font-size:10px;color:var(--muted);padding:10px 0 18px}
+
+  /* ---------- Changes + diff (right pane) ---------- */
+  .rightpane{display:grid;grid-template-rows:minmax(0,1fr) minmax(0,1.15fr);min-height:0}
+  .changes{flex:1;min-height:0;display:flex;flex-direction:column}
+  .clist{flex:1;overflow:auto;padding:2px 8px 10px}
+  .cgroup{padding:8px 6px 4px}
+  .cgroup.nogap{padding-top:0}
+  .frow{
+    display:flex;align-items:center;gap:10px;width:100%;
+    padding:6px 10px;min-height:42px;border-radius:8px;text-align:left;cursor:pointer;
+  }
+  .frow:hover{background:var(--surface2)}
+  .frow.sel{background:color-mix(in oklch,var(--accent) 12%, var(--surface2))}
+  .frow .pill{
+    font-family:var(--font-mono);font-size:10.5px;font-weight:800;width:22px;height:22px;flex:none;
+    display:grid;place-items:center;border-radius:6px;
+  }
+  .pill.M{background:color-mix(in oklch,var(--lane0) 30%, var(--surface2));color:var(--lane0)}
+  .pill.A{background:color-mix(in oklch,var(--add) 26%, var(--surface2));color:var(--add)}
+  .pill.D{background:color-mix(in oklch,var(--del) 26%, var(--surface2));color:var(--del)}
+  .frow .fpath{flex:1;min-width:0;font-family:var(--font-mono);font-size:11.5px;color:var(--fg);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .frow .fsize{font-family:var(--font-mono);font-size:10px;color:var(--muted)}
+  .frow .fbtn{
+    width:30px;height:30px;flex:none;display:grid;place-items:center;border-radius:7px;color:var(--muted);
+  }
+  .frow .fbtn svg{width:15px;height:15px}
+  .frow .fbtn:hover{background:color-mix(in oklch,var(--accent) 18%, var(--surface2));color:var(--accent)}
+  .empty{padding:30px 20px;text-align:center;color:var(--muted);font-size:12px;line-height:1.6}
+  .empty .big{font-size:13px;font-weight:700;color:var(--fg);margin-bottom:4px}
+
+  /* ---------- Diff ---------- */
+  .diffhead{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--border);min-width:0}
+  .diffhead .fpath{flex:1;min-width:0;font-family:var(--font-mono);font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .diffhead .pill{font-family:var(--font-mono);font-size:10.5px;font-weight:800;padding:2px 8px;border-radius:6px}
+  .diffbody{flex:1;overflow:auto;font-family:var(--font-mono);font-size:11.5px;line-height:1.55;padding:4px 0 16px}
+  .dline{display:flex;min-width:0}
+  .dline .no{width:38px;flex:none;text-align:right;padding-right:10px;color:var(--muted);opacity:.55;user-select:none;font-size:10.5px;line-height:1.7}
+  .dline .tx{flex:1;padding:0 12px;white-space:pre;overflow-x:auto;line-height:1.7}
+  .dline.add .tx{background:color-mix(in oklch,var(--add) 14%, transparent);color:color-mix(in oklch,var(--add) 70%, var(--fg));border-radius:0 4px 4px 0}
+  .dline.del .tx{background:color-mix(in oklch,var(--del) 14%, transparent);color:color-mix(in oklch,var(--del) 75%, var(--fg));border-radius:0 4px 4px 0}
+  .dline.add .no{background:color-mix(in oklch,var(--add) 10%, transparent)}
+  .dline.del .no{background:color-mix(in oklch,var(--del) 10%, transparent)}
+  .dline.hunk .tx{color:color-mix(in oklch,var(--lane0) 80%, var(--fg));font-weight:600}
+  .dline.hunk{background:color-mix(in oklch,var(--lane0) 6%, transparent)}
+
+  /* ---------- Status bar ---------- */
+  .statusbar{display:flex;align-items:center;gap:8px;padding:0 12px;border-top:1px solid var(--border);font-family:var(--font-mono);font-size:11px}
+  .chip{display:inline-flex;align-items:center;gap:7px;padding:4px 11px;border-radius:99px;border:1px solid var(--border);color:var(--muted);white-space:nowrap}
+  .chip .dot{width:7px;height:7px;border-radius:50%;flex:none}
+  .chip.branch{background:var(--surface2);color:var(--fg);font-weight:700}
+  .chip.branch .dot{background:var(--gold)}
+  .chip.clean .dot{background:var(--add)}
+  .chip.clean{color:var(--add);border-color:color-mix(in oklch,var(--add) 30%, var(--border))}
+  .chip .n{font-weight:800;color:var(--fg)}
+  .statusright{margin-left:auto;display:flex;align-items:center;gap:8px}
+  .statusright .sync{color:var(--muted)}
+  .statusright .sync.ok{color:var(--add)}
+
+  /* ---------- Modal ---------- */
+  .overlay{
+    position:fixed;inset:0;background:oklch(10% 0.01 250 / 0.55);backdrop-filter:blur(3px);
+    display:none;align-items:center;justify-content:center;z-index:40;
+  }
+  .overlay.open{display:flex}
+  .modal{
+    width:min(560px, 92vw);background:var(--surface);border:1px solid var(--border);
+    border-radius:14px;box-shadow:var(--shadow);padding:20px 22px;
+  }
+  .modal h3{font-size:15px;font-weight:700;margin-bottom:2px}
+  .modal .msub{font-size:12px;color:var(--muted);margin-bottom:16px}
+  .field{margin-bottom:14px}
+  .field label{display:block;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin-bottom:7px}
+  .field .wrap{position:relative}
+  .field input,.field textarea{
+    width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:9px;
+    color:var(--fg);padding:11px 12px;font-size:13px;font-family:var(--font-mono);outline:none;
+    transition:border-color .12s;
+  }
+  .field input:focus,.field textarea:focus{border-color:var(--accent)}
+  .field input.warn{border-color:color-mix(in oklch,var(--del) 60%, var(--border))}
+  .counter{position:absolute;right:10px;bottom:8px;font-family:var(--font-mono);font-size:10px;color:var(--muted)}
+  .counter.warn{color:var(--del)}
+  .modal .row{display:flex;justify-content:flex-end;gap:8px;margin-top:8px}
+  .modal .hint{font-size:11px;color:var(--muted);line-height:1.5;margin-top:-6px;margin-bottom:8px}
+  .btn{min-height:42px;padding:0 16px;border-radius:9px;font-size:13px;font-weight:700;border:1px solid var(--border)}
+  .btn.secondary{background:var(--surface2);color:var(--fg)}
+  .btn.secondary:hover{background:color-mix(in oklch, var(--accent) 10%, var(--surface2))}
+  .btn.primary{background:var(--accent);border-color:var(--accent);color:oklch(16% 0.03 148)}
+  .btn.primary:hover{background:color-mix(in oklch, var(--accent) 88%, white)}
+  .btn.primary[disabled]{opacity:.5;cursor:not-allowed}
+
+  /* ---------- Toast ---------- */
+  .toast{
+    position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(16px);
+    display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--border);
+    border-left:3px solid var(--accent);box-shadow:var(--shadow);
+    padding:12px 18px;border-radius:11px;font-size:13px;font-weight:600;z-index:60;
+    opacity:0;pointer-events:none;transition:.28s cubic-bezier(.2,.8,.2,1);
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  .toast .ok{width:18px;height:18px;border-radius:50%;background:var(--accent);color:oklch(16% 0.03 148);display:grid;place-items:center;flex:none}
+  .toast .ok svg{width:11px;height:11px}
+
+  /* ---------- Theme menu ---------- */
+  .menupanel{
+    position:absolute;top:calc(100% + 6px);right:12px;z-index:30;
+    background:var(--surface);border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow);
+    padding:8px;min-width:210px;
+    display:none;
+  }
+  .menupanel.open{display:block}
+  .menupanel .mitem{width:100%;display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:8px;font-size:12.5px;font-weight:600;text-align:left}
+  .menupanel .mitem:hover{background:var(--surface2)}
+  .menupanel .mitem .sw{width:16px;height:16px;border-radius:5px;border:1px solid var(--border);flex:none}
+  .menupanel .label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);padding:6px 10px 4px}
+  .menupanel .msep{height:1px;background:var(--border);margin:6px 4px}
+  .mitem .check{margin-left:auto;color:var(--accent);font-weight:800}
+
+  .scanlines{display:none;position:absolute;inset:0;pointer-events:none;border-radius:14px;overflow:hidden}
+  html[data-theme="matrice"] .scanlines{display:block;background:repeating-linear-gradient(0deg, oklch(0% 0 0 / 0.09) 0 1px, transparent 1px 3px)}
+  .window{position:relative}
+
+  @media (max-width:1180px){
+    .main{grid-template-columns:230px minmax(0,1fr)}
+    .rightpane{grid-column:1/-1;grid-row:2;min-height:300px}
+    body{padding:6px}
+    .window{height:calc(100vh - 12px)}
+  }
+</style>
+</head>
+<body>
+<div class="window" data-od-id="app-window">
+  <div class="scanlines"></div>
+
+  <!-- Title bar -->
+  <header class="titlebar" data-od-id="titlebar">
+    <div class="appname">Git<b>Matrix</b></div>
+    <span class="version">v0.3.1</span>
+    <div class="repopath" title="Dépôt ouvert — travail en cours">
+      <span class="dirty-dot"></span>
+      <span>gitmatrix</span><span class="sep">/</span><span class="cwd">src/gitmatrix</span>
+      <span class="sep">·</span><span id="repo-branch">branche main</span>
+    </div>
+    <div class="winbtns" aria-hidden="true">
+      <button title="Réduire"><svg width="12" height="12" viewBox="0 0 12 12"><path d="M2 6h8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" fill="none"/></svg></button>
+      <button title="Agrandir"><svg width="12" height="12" viewBox="0 0 12 12"><rect x="2.5" y="2.5" width="7" height="7" stroke="currentColor" stroke-width="1.4" fill="none" rx="1"/></svg></button>
+      <button class="close" title="Fermer"><svg width="12" height="12" viewBox="0 0 12 12"><path d="M3 3l6 6M9 3l-6 6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" fill="none"/></svg></button>
+    </div>
+  </header>
+
+  <!-- Toolbar -->
+  <nav class="toolbar" data-od-id="toolbar" aria-label="Barre d'outils">
+    <div class="tzone">
+      <button class="branchsel" id="branchsel" data-od-id="branch-select">
+        <span class="dot"></span><span id="branchsel-name">main</span>
+        <svg class="caret" width="12" height="12" viewBox="0 0 12 12"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <div class="divider"></div>
+      <button class="tbtn" id="btn-open" title="Ouvrir un dépôt local (Ctrl+O)" data-od-id="btn-open">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>Ouvrir
+      </button>
+      <button class="tbtn" id="btn-clone" title="Cloner un dépôt distant" data-od-id="btn-clone">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M12 3v11m0 0l-4-4m4 4l4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>Cloner
+      </button>
+      <button class="tbtn" id="btn-refresh" title="Actualiser les références (Ctrl+R)" data-od-id="btn-refresh">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M20 11a8 8 0 10.5 4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M20 4v7h-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Actualiser
+      </button>
+    </div>
+
+    <div class="tzone">
+      <button class="tbtn" id="btn-settings" title="Réglages" data-od-id="btn-settings" aria-expanded="false">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M12 15a3 3 0 100-6 3 3 0 000 6z" stroke="currentColor" stroke-width="2"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z" stroke="currentColor" stroke-width="1.6"/></svg>
+      </button>
+    </div>
+
+    <div class="menupanel" id="menupanel" data-od-id="theme-menu">
+      <div class="label">Thème</div>
+      <button class="mitem" data-theme-set="nuit"><span class="sw" style="background:oklch(21% 0.014 250);border-color:oklch(40% 0.02 250)"></span>Nuit<span class="check" data-check="nuit"></span></button>
+      <button class="mitem" data-theme-set="matrice"><span class="sw" style="background:oklch(13% 0.022 150);border-color:oklch(0 0.16 148)"></span>Matrice<span class="check" data-check="matrice"></span></button>
+      <button class="mitem" data-theme-set="jour"><span class="sw" style="background:oklch(99% 0 0);border-color:oklch(88% 0.01 240)"></span>Jour<span class="check" data-check="jour"></span></button>
+      <div class="msep"></div>
+      <button class="mitem" id="btn-about" data-od-id="btn-about">À propos de GitMatrix</button>
+    </div>
+  </nav>
+
+  <!-- Workflow bar (centre de commande) -->
+  <div class="workflow" data-od-id="workflow-bar" role="navigation" aria-label="Étapes du flux Git">
+    <div class="wseg clickable done" data-wstep="1" id="wseg1">
+      <span class="wkey">1</span>
+      <div class="wbody"><div class="wtitle">Modifier</div><div class="wsub" id="wf-sub1">3 fichiers modifiés dans le dépôt</div></div>
+    </div>
+    <div class="wlink done" id="wlink1"></div>
+    <div class="wseg active" data-wstep="2" id="wseg2">
+      <span class="wkey">2</span>
+      <div class="wbody"><div class="wtitle">Indexer</div><div class="wsub" id="wf-sub2">2 fichiers indexés · 3 non indexés</div></div>
+      <button class="wbtn" id="wf-index" title="Indexer tous les fichiers modifiés (Ctrl+S)" data-od-id="wf-stage-all">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M5 12h14M14 7l5 5-5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Tout indexer
+      </button>
+    </div>
+    <div class="wlink" id="wlink2"></div>
+    <div class="wseg" data-wstep="3" id="wseg3">
+      <span class="wkey">3</span>
+      <div class="wbody"><div class="wtitle">Valider</div><div class="wsub" id="wf-sub3">Aucun changement indexé pour le moment</div></div>
+      <button class="wbtn primary" id="wf-commit" title="Créer le commit (Ctrl+Entrée)" data-od-id="wf-commit" disabled>
+        <svg viewBox="0 0 24 24" fill="none"><path d="M12 3v13m0 0l-5-5m5 5l5-5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 19h14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>Valider le commit
+      </button>
+    </div>
+    <div class="wlink" id="wlink3"></div>
+    <div class="wseg waiting" data-wstep="4" id="wseg4">
+      <span class="wkey">4</span>
+      <div class="wbody"><div class="wtitle">Synchroniser</div><div class="wsub" id="wf-sub4">À jour avec origin/main</div></div>
+      <button class="wbtn" id="wf-push" title="Pousser vers origin/main (Ctrl+P)" data-od-id="wf-push" disabled>
+        <svg viewBox="0 0 24 24" fill="none"><path d="M12 13V3m0 0L7 8m5-5l5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 17a2 2 0 012-2h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>Pousser
+      </button>
+      <button class="wicon" id="wf-fetch" title="Récupérer les références distantes" data-od-id="wf-fetch">
+        <span class="spin"></span>
+        <svg class="ico" viewBox="0 0 24 24" fill="none"><path d="M5 12a7 7 0 111 4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M5 12l3-3m-3 3l3 3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Three-pane main -->
+  <main class="main">
+    <!-- Branches -->
+    <aside class="panel" data-od-id="branches-panel">
+      <div class="phead">
+        <h2>Branches</h2><span class="count" id="branch-count">4</span>
+      </div>
+      <div class="branchsearch">
+        <svg viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2"/><path d="M20 20l-3.5-3.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        <input id="branchfilter" type="search" placeholder="Filtrer les branches…" aria-label="Filtrer les branches">
+      </div>
+      <div class="branches">
+        <div class="bsection">Locales</div>
+        <button class="brow active" data-branch="main"><span class="dot" style="background:var(--gold)"></span><span class="bname">main</span><span class="ahead" id="main-ahead">↑2</span></button>
+        <button class="brow" data-branch="feature/themes"><span class="dot" style="background:var(--lane1)"></span><span class="bname">feature/themes</span><span class="ahead merge">fusionnée</span></button>
+        <button class="brow" data-branch="experimental/graph"><span class="dot" style="background:var(--lane2)"></span><span class="bname">experimental/graph</span><span class="ahead">↓1</span></button>
+        <div class="bsection">Dépôts distants</div>
+        <div class="brow"><span class="dot" style="background:var(--lane2)"></span><span class="bname">origin/main</span><span class="ahead" id="origin-ahead">↓1</span></div>
+        <div class="brow"><span class="dot" style="background:var(--lane1)"></span><span class="bname">origin/feature/themes</span><span class="ahead merge">fusionnée</span></div>
+      </div>
+    </aside>
+
+    <!-- Commit graph -->
+    <section class="graphwrap panel" data-od-id="commit-graph">
+      <div class="graph" id="graphscroll">
+        <div class="draftcard" data-od-id="draft-card" id="draftcard" title="Voir les modifications du panneau de droite">
+          <span class="dot"></span>
+          <div><div class="dtxt">Travail en cours — <span id="draft-count">3 fichiers</span> non indexés</div>
+          <div class="dsub" id="draft-sub">Modifications pas encore intégrées au workflow</div></div>
+          <div class="drafting" id="draft-next">Étape suivante → Indexer</div>
+        </div>
+        <div class="draftline" id="draftline" style="top:14px"></div>
+        <div id="graphrows"></div>
+        <div class="graphend" id="graphend">fin de l'historique local</div>
+      </div>
+    </section>
+
+    <!-- Right: changes + diff -->
+    <aside class="rightpane">
+      <section class="panel changes" data-od-id="changes-panel">
+        <div class="phead">
+          <h2>Modifications</h2><span class="count" id="changes-count">5</span>
+        </div>
+        <div class="clist" id="changeslist"></div>
+      </section>
+      <section class="panel" data-od-id="diff-viewer">
+        <div class="diffhead">
+          <span class="fpath" id="diff-path">—</span>
+          <span class="pill pill-M" id="diff-pill">M</span>
+        </div>
+        <div class="diffbody" id="diffbody"></div>
+      </section>
+    </aside>
+  </main>
+
+  <!-- Status bar -->
+  <footer class="statusbar" data-od-id="status-bar">
+    <span class="chip branch"><span class="dot"></span><span id="sb-branch">main</span></span>
+    <span class="chip" id="sb-dirty"><span class="dot" style="background:var(--accent)"></span><span id="sb-dirty-txt">● 5 modifications</span></span>
+    <span class="chip"><span id="sb-staged">2 indexés</span></span>
+    <span class="chip"><span id="sb-unstaged">3 non indexés</span></span>
+    <div class="statusright">
+      <span class="sync" id="sb-sync">À jour avec origin/main</span>
+    </div>
+  </footer>
+</div>
+
+<!-- Commit modal -->
+<div class="overlay" id="modal" data-od-id="commit-dialog">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modaltitle">
+    <h3 id="modaltitle">Valider un commit</h3>
+    <p class="msub">Sur <b id="dlg-branch" style="color:var(--accent)">main</b> · <span id="dlg-count">5 changements</span> à inclure</p>
+    <div class="field">
+      <label for="csubject">Résumé — sujet</label>
+      <div class="wrap">
+        <input id="csubject" type="text" maxlength="120" placeholder="feat(theme) : ajout du thème daylight" autocomplete="off">
+        <span class="counter" id="ccount">0 / 50</span>
+      </div>
+    </div>
+    <div class="field">
+      <label for="cbody">Description — corps (facultatif)</label>
+      <textarea id="cbody" rows="4" placeholder="Expliquez le contexte et la motivation de ce changement…"></textarea>
+    </div>
+    <p class="hint">Le résumé doit décrire le « quoi », le corps le « pourquoi ». <b>50 caractères max.</b> pour le sujet recommandé.</p>
+    <div class="row">
+      <button class="btn secondary" id="btn-cancel">Annuler</button>
+      <button class="btn primary" id="btn-submit" data-od-id="btn-commit-submit" disabled>Valider le commit</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status"><span class="ok"><svg viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L19 7" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span id="toast-txt"></span></div>
+
+<script>
+/* ================= GitMatrix — maquette du flux Git ================= */
+const LANES = { 0:{c:"var(--lane0)"}, 1:{c:"var(--lane1)"}, 2:{c:"var(--lane2)"} };
+const ROWSPEC = [
+  {node:0, down:[0], elbow:null},
+  {node:0, down:[0], elbow:null},
+  {node:0, down:[0], elbow:[0,1]},
+  {node:1, down:[0,1], elbow:null},
+  {node:1, down:[0,1], elbow:null},
+  {node:1, down:[0,1], elbow:[1,0]},
+  {node:0, down:[0], elbow:null},
+  {node:0, down:[0], elbow:null},
+  {node:0, down:[0], elbow:null},
+  {node:0, down:[0], elbow:[0,2]},
+  {node:0, down:[0,2], elbow:null},
+  {node:2, down:[0,2], elbow:null},
+  {node:2, down:[0,2], elbow:null},
+  {node:0, down:[0], elbow:null},
+];
+const BASE = [
+  {msg:"feat(commit) : validation du sujet non vide", sub:"Nazim B. · il y a 2 h", sha:"8f3a2c1", id:"j", lane:0, refs:["head","origin"], merge:false, spec:0},
+  {msg:"feat(graph) : badges de références colorés", sub:"Aya L. · il y a 6 h", sha:"2be90f4", id:"i", lane:0, refs:[], merge:false, spec:1},
+  {msg:"Merge branch 'feature/themes' into main", sub:"Nazim B. · hier", sha:"c41d07e", id:"h", lane:0, refs:["tag"], merge:true, spec:2},
+  {msg:"feat(themes) : hot-swap sans redémarrage", sub:"Nazim B. · hier", sha:"7aa13b9", id:"e", lane:1, refs:[], merge:false, spec:3},
+  {msg:"feat(themes) : thème daylight", sub:"Nazim B. · hier", sha:"1e92a00", id:"d", lane:1, refs:[], merge:false, spec:4},
+  {msg:"feat(themes) : thème matrix-void", sub:"Nazim B. · il y a 2 jours", sha:"b66d5f2", id:"c", lane:1, refs:["br"], merge:false, spec:5},
+  {msg:"feat(themes) : moteur QSS piloté par tokens", sub:"Nazim B. · il y a 2 jours", sha:"90c3b11", id:"b", lane:0, refs:[], merge:false, spec:6},
+  {msg:"fix(status) : compteurs staged / unstaged", sub:"Aya L. · il y a 3 jours", sha:"5f1ac84", id:"g", lane:0, refs:[], merge:false, spec:7},
+  {msg:"feat(clone) : URL + dossier cible suggéré", sub:"Nazim B. · il y a 3 jours", sha:"d04927a", id:"f", lane:0, refs:[], merge:false, spec:8},
+  {msg:"refactor(i18n) : UI unifiée en anglais", sub:"Nazim B. · il y a 5 jours", sha:"33b8812", id:"a", lane:0, refs:[], merge:false, spec:9},
+  {msg:"chore : release v0.1.0", sub:"Nazim B. · la semaine dernière", sha:"0c8ee77", id:"x", lane:0, refs:["tag0"], merge:false, spec:10},
+  {msg:"exp(graph) : layout en ordre topologique", sub:"Aya L. · la semaine dernière", sha:"991ea5d", id:"z", lane:2, refs:[], merge:false, spec:11},
+  {msg:"exp(graph) : zoom & filtre de l'historique", sub:"Aya L. · la semaine dernière", sha:"1b3f6c2", id:"w", lane:2, refs:[], merge:false, spec:12},
+  {msg:"init : dépôt GitMatrix", sub:"Nazim B. · il y a 2 semaines", sha:"e51f003", id:"y", lane:0, refs:[], merge:false, spec:13},
+];
+const LANEW = 34, GMARGIN = 16, RH = 44, GW = 128;
+const laneX = l => GMARGIN + l * LANEW + LANEW/2;
+
+let commits = BASE.map((c,i)=>({...c, i}));
+let extraCommits = [];
+let staged = [];
+let unstaged = [];
+let selectedFile = null;
+let selectedCommit = "j";
+let headOnExtra = false;
+let pushDone = false;
+let syncText = "À jour avec origin/main";
+
+const FILES = {
+  theme:  {path:"src/gitmatrix/theme.py",           status:"M", staged:true},
+  plan:   {path:"doc/PLAN.md",                      status:"M", staged:true},
+  graph:  {path:"src/gitmatrix/models/graph.py",    status:"M", staged:false},
+  matrix: {path:"assets/themes/matrix-void.json",   status:"A", staged:false},
+  splash: {path:"src/gitmatrix/ui/splash_screen.py",status:"M", staged:false},
+};
+const DIFFS = {
+  theme: [
+    h("@@ -12,7 +12,9 @@ class ThemeEngine", 12),
+    c("_themes: dict[str, dict] = {}"), c(""),
+    c("    def load(self, name: str) -> None:"),
+    a("+        palette = self._palette_for(name)"),
+    a("+        qss = self._render_qss(palette)"),
+    a("+        self._apply_hot(qss)            # sans redémarrage", 14),
+    c("        tokens = self._read_json(f\"themes/{name}.json\")"),
+    d("-        QApplication.instance().setStyleSheet(qss)"),
+    c(""),
+    c("    def _palette_for(self, name):"), a("+        return self._tokens(name)[\"palette\"]")
+  ],
+  plan: [
+    h("@@ -1,4 +1,6 @@ # Feuille de route GitMatrix", 1),
+    c("# Feuille de route GitMatrix"), c(""),
+    d("- [ ] Stash, amend, reword"), d("- [ ] Merge / rebase visuel"),
+    a("+prévu v0.4 : stash, amend, reword"), a("+prévu v0.4 : merge / rebase visuel", 4)
+  ],
+  graph: [
+    h("@@ -88,10 +88,14 @@ def layout(self, commits):", 88),
+    c("        rows = self._rows_in_topo(commits)"),
+    d("-        self._lanes = [0] * len(rows)"),
+    a("+        self._lanes = self._assign_lanes(rows)"),
+    a("+        # les lignes ne croisent jamais les nœuds"),
+    c("        for r, row in enumerate(rows):"),
+    a("+            row.lane = self._lanes[r]"),
+    c("            row.y = r * ROW_HEIGHT"),
+    c("        return rows")
+  ],
+  matrix: [
+    h("@@ -0,0 +1,12 @@ + thème matrix-void", 1),
+    a("+{"),
+    a("+  \"id\": \"matrix-void\","), a("+  \"base\": \"dark\","), a("+  \"tokens\": {"),
+    a("+    \"window\": \"#090d0a\",  \"accent\": \"#33ff77\","), a("+    \"graph\": \"#0d1410\",   \"text\": \"#c8ffd8\""),
+    a("+  },"), a("+  \"scanlines\": true"), a("+}")
+  ],
+  splash: [
+    h("@@ -41,8 +41,10 @@ class SplashScreen", 41),
+    c("        self._message.setText(\"Déchiffrement…\")"),
+    d("-        self._rain.set_speed(60)"),
+    a("+        self._rain.set_speed(45)"),
+    c("        self._load_progress()"),
+    a("+        # pleine écran, bouton LAUNCH avec halo"),
+    c("        self._preview = full_screen_preview()")
+  ],
+};
+function a(t,no){return {t:"add",x:t,no}}
+function d(t,no){return {t:"del",x:t,no}}
+function c(t,no){return {t:"ctx",x:t,no}}
+function h(x,no){return {t:"hunk",x:x,no}}
+
+/* ---------------- Graph rendering ---------------- */
+function refBadge(ref, key){
+  if(ref==="head") return `<span class="ref head">HEAD</span>`;
+  if(ref==="origin") return `<span class="ref remote" id="ref-origin">origin/main${!pushDone&&headOnExtra?" ↑1":""}</span>`;
+  if(ref==="br") return `<span class="ref br">feature/themes</span>`;
+  if(ref==="tag") return `<span class="ref tag">v0.3.1</span>`;
+  if(ref==="tag0") return `<span class="ref tag">v0.1.0</span>`;
+  return "";
+}
+function rowSVG(spec, commit){
+  const w = GW, h = RH, mid = h/2, bot = h;
+  let paths = "", nodes = "" , el = "";
+  const laneC = c => LANES[c] ? LANES[c].c : "var(--lane0)";
+  spec.down.forEach(L=>{
+    const x = laneX(L);
+    paths += `<line class="v" x1="${x}" y1="0" x2="${x}" y2="${h}" style="color:${laneC(L)}"></line>`;
+  });
+  if(spec.elbow){
+    const x1 = laneX(spec.elbow[0]), x2 = laneX(spec.elbow[1]);
+    el = `<line class="elbow" x1="${x1}" y1="${bot}" x2="${x2}" y2="${bot}" style="color:${laneC(spec.elbow[1])}"></line>`;
+  }
+  if(spec.node!==null){
+    const x = laneX(spec.node);
+    nodes = commit.merge
+      ? `<g transform="translate(${x},${mid})"><rect class="node merge" x="-4.6" y="-4.6" width="9.2" height="9.2" rx="1.4" fill="${laneC(spec.node)}" style="transform:rotate(45deg)"></rect></g>`
+      : `<circle class="node" cx="${x}" cy="${mid}" r="5.4" fill="${laneC(spec.node)}"></circle>`;
+  }
+  return `<svg class="csvg" width="${w}" height="${h}" aria-hidden="true">${paths}${el}${nodes}</svg>`;
+}
+function renderGraph(){
+  const all = extraCommits.concat(commits);
+  const DEFAULT_SPEC = {node:0, down:[0], elbow:null};
+  const html = all.map((cc,k)=>{
+    const specRow = cc.spec!==undefined ? ROWSPEC[cc.spec] : DEFAULT_SPEC;
+    const sel = selectedCommit===cc.id;
+    const refs = cc.refs.map(r=>refBadge(r)).join("");
+    return `<div class="crow" data-id="${cc.id}" style="--rowtop:${k*44}px">
+      ${rowSVG(specRow, cc)}
+      <div class="cmeta${sel?" sel":""}" role="button" tabindex="0" data-select="${cc.id}" aria-label="Commit ${cc.sha} : ${cc.msg}">
+        <div class="cmsg"><span class="txt">${cc.msg}</span>${refs}</div>
+        <div class="csub"><span class="sha">${cc.sha}</span> · ${cc.sub}</div>
+      </div>
+    </div>`;
+  }).join("");
+  document.getElementById("graphrows").innerHTML = html;
+  document.getElementById("graphend").innerHTML = extraCommits.length
+    ? `${extraCommits.length} commit(s) local(aux) — pas encore poussé(s)` : "fin de l'historique local";
+  const card = document.querySelector(".draftcard");
+  const dl = document.getElementById("draftline");
+  if(card){
+    dl.style.top = (card.offsetTop + card.offsetHeight - 1) + "px";
+    dl.style.height = (44/2 + 2) + "px";
+  }
+}
+
+/* ---------------- Files (staged / unstaged) ---------------- */
+function pill(status){return `<span class="pill pill-${status}">${status}</span>`;}
+function fileRow(f, group){
+  const isStaged = group==="staged";
+  const btn = isStaged
+    ? `<button class="fbtn" title="Désindexer" data-unstage="${f.path}"><svg viewBox="0 0 24 24" fill="none"><path d="M5 12h14M10 7l-5 5 5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>`
+    : `<button class="fbtn" title="Indexer" data-stage="${f.path}"><svg viewBox="0 0 24 24" fill="none"><path d="M5 12h14M14 7l5 5-5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>`;
+  const sel = selectedFile===f.path ? " sel" : "";
+  return `<div class="frow${sel}" data-file="${f.path}" tabindex="0" aria-label="${f.path}">${pill(f.status)}<span class="fpath" title="${f.path}">${f.path}</span><span class="fsize">${f.size||""}</span>${btn}</div>`;
+}
+function renderFiles(){
+  const stagedF = staged.map(p=>FILES[p]);
+  const unstagedF = unstaged.map(p=>FILES[p]);
+  let html = "";
+  html += `<div class="cgroup"><div class="phead" style="padding:2px 6px 6px"><h2>Indexés</h2><span class="count">${stagedF.length}</span></div>`;
+  html += stagedF.length ? stagedF.map(f=>fileRow(f,"staged")).join("") : `<div class="empty" style="padding:12px 8px">Index vide</div>`;
+  html += `</div>`;
+  html += `<div class="cgroup nogap"><div class="phead" style="padding:2px 6px 6px"><h2>Modifications</h2><span class="count">${unstagedF.length}</span></div>`;
+  html += unstagedF.length ? unstagedF.map(f=>fileRow(f,"unstaged")).join("") : `<div class="empty" style="padding:12px 8px">Arbre de travail propre</div>`;
+  html += `</div>`;
+  document.getElementById("changeslist").innerHTML = html;
+  document.getElementById("changes-count").textContent = stagedF.length + unstagedF.length;
+  document.getElementById("sb-staged").textContent = `${stagedF.length} indexé${stagedF.length>1?"s":""}`;
+  document.getElementById("sb-unstaged").textContent = `${unstagedF.length} non indexé${unstagedF.length>1?"s":""}`;
+  document.getElementById("sb-dirty-txt").textContent = `● ${stagedF.length+unstagedF.length} modifications`;
+  document.getElementById("draft-count").textContent = `${unstagedF.length} fichier${unstagedF.length>1?"s":""}`;
+  showDiff();
+  updateWorkflow();
+}
+function showDiff(){
+  const f = selectedFile ? FILES[selectedFile] : null;
+  if(f){ showDiffFor(f, true); return; }
+  const fallback = FILES[unstaged[0] || staged[0]];
+  const bodyEl = document.getElementById("diffbody");
+  if(!fallback){
+    document.getElementById("diff-path").textContent = "— aucun fichier sélectionné";
+    document.getElementById("diff-pill").textContent = "—";
+    bodyEl.innerHTML = `<div class="empty"><div class="big">Arbre de travail propre</div>Sélectionnez un fichier pour afficher son diff, ou validez simplement votre commit.</div>`;
+    return;
+  }
+  showDiffFor(fallback, false);
+}
+function showDiffFor(f){
+  const bodyEl = document.getElementById("diffbody");
+  document.getElementById("diff-path").textContent = f.path;
+  document.getElementById("diff-path").title = f.path;
+  const pp = document.getElementById("diff-pill");
+  pp.textContent = f.status;
+  pp.className = "pill pill-" + f.status;
+  const lines = DIFFS[f.path] || [{t:"ctx",x:"(diff indisponible)"}];
+  let html = `<div class="phead" style="padding:6px 14px 8px"><span style="font-size:11px;color:var(--muted)">${f.staged?"Indexé":"Modifié"} · ${f.path}</span></div>`;
+  html += lines.map(L=>{
+    const n = L.no;
+    const sign = L.t==="add"?"+":(L.t==="del"?"-":" ");
+    const shown = (L.t==="hunk") ? L.x : (sign + L.x.replace(/^[+-]/,""));
+    return `<div class="dline ${L.t}"><span class="no">${n}</span><span class="tx">${esc(shown)}</span></div>`;
+  }).join("");
+  bodyEl.innerHTML = html;
+}
+
+/* ---------------- Workflow bar ---------------- */
+function updateWorkflow(){
+  const hasStaged = staged.length > 0;
+  const hasUnstaged = unstaged.length > 0;
+  const hasCommits = extraCommits.length > 0;
+  const marks = {1:true, 2:hasUnstaged||hasStaged, 3:hasCommits, 4:pushDone};
+  const firstActive = [1,2,3,4].find(k=>!marks[k]) || 4;
+  const segs = document.querySelectorAll(".wseg");
+  const links = document.querySelectorAll(".wlink");
+  segs.forEach(s=>{
+    const k = +s.dataset.wstep;
+    s.classList.toggle("done", marks[k]);
+    s.classList.toggle("active", k===firstActive);
+    s.classList.toggle("waiting", k>firstActive);
+  });
+  links.forEach((l,i)=> l.classList.toggle("done", marks[i+1]));
+  const sub1 = document.getElementById("wf-sub1");
+  const sub2 = document.getElementById("wf-sub2");
+  const sub3 = document.getElementById("wf-sub3");
+  const sub4 = document.getElementById("wf-sub4");
+  if(sub1) sub1.textContent = hasUnstaged||hasStaged ? `${unstaged.length + staged.length} fichier(s) modifié(s) dans le dépôt` : "Arbre de travail propre";
+  if(sub2) sub2.textContent = hasUnstaged ? `${staged.length} indexé(s) · ${unstaged.length} non indexé(s)` : (hasStaged ? `${staged.length} fichier(s) indexé(s)` : "Aucune modification");
+  if(sub3) sub3.textContent = hasCommits ? `${extraCommits.length} commit(s) local(aux) non poussé(s)` : (hasStaged ? `${staged.length} changement(s) prêt(s) à valider` : "Aucun changement indexé");
+  if(sub4) sub4.textContent = pushDone ? "Synchronisé ✓" : (hasCommits ? "Des commits à pousser" : "En attente d'un commit");
+  document.getElementById("wf-index").disabled = !hasUnstaged;
+  document.getElementById("wf-commit").disabled = !hasStaged;
+  document.getElementById("wf-push").disabled = pushDone || !hasCommits;
+  document.getElementById("wf-sub1").style.color = marks[1] ? "var(--fg)" : "var(--muted)";
+  const dc = document.getElementById("draft-count");
+  const ds = document.getElementById("draft-sub");
+  const dn = document.getElementById("draft-next");
+  if(dc) dc.textContent = `${unstaged.length + staged.length} fichier(s) modifié(s)`;
+  if(ds) ds.textContent = hasUnstaged ? `${unstaged.length} non indexé(s) — passez à l'étape 2` : (hasStaged ? `${staged.length} indexé(s) — passez à l'étape 3 (Valider)` : "Modifications prêtes à être validées");
+  if(dn) dn.textContent = hasUnstaged ? "Étape suivante → Indexer" : (hasStaged ? "Étape suivante → Valider" : (hasCommits ? "Étape suivante → Pousser" : "Workflow terminé ✓"));
+}
+
+/* Stage-all via workflow bar */
+document.getElementById("wf-index").addEventListener("click", ()=>{
+  if(!unstaged.length){ toast("Rien à indexer — tout est déjà dans l'index"); return; }
+  unstaged.forEach(p=>{ FILES[p].staged = true; staged.push(p); });
+  unstaged = [];
+  renderFiles();
+  toast("Tout indexé");
+});
+/* Commit via workflow bar */
+document.getElementById("wf-commit").addEventListener("click", ()=> openModal());
+/* Push via workflow bar */
+document.getElementById("wf-push").addEventListener("click", push);
+/* Fetch via workflow bar */
+document.getElementById("wf-fetch").addEventListener("click", ()=>{
+  const b = document.getElementById("wf-fetch");
+  b.classList.add("loading");
+  setTimeout(()=>{ b.classList.remove("loading"); toast("Références distantes récupérées — aucune nouveauté"); }, 500);
+});
+/* Step 1 click */
+document.getElementById("wseg1").addEventListener("click", ()=>{
+  toast("Ouvrez le panneau de droite pour voir les fichiers modifiés");
+});
+
+/* ---------------- Commit modal ---------------- */
+const modal = document.getElementById("modal");
+const subject = document.getElementById("csubject");
+const body = document.getElementById("cbody");
+const ccount = document.getElementById("ccount");
+const submitBtn = document.getElementById("btn-submit");
+function openModal(){
+  document.getElementById("dlg-branch").textContent = "main";
+  document.getElementById("dlg-count").textContent = `${staged.length} changement${staged.length>1?"s":""}`;
+  modal.classList.add("open");
+  subject.value = ""; body.value = "";
+  updateCounter();
+  setTimeout(()=>subject.focus(), 40);
+}
+function closeModal(){ modal.classList.remove("open"); }
+function updateCounter(){
+  const n = subject.value.length;
+  ccount.textContent = `${n} / 50`;
+  ccount.classList.toggle("warn", n>50);
+  subject.classList.toggle("warn", n>50);
+  submitBtn.disabled = subject.value.trim().length===0;
+}
+subject.addEventListener("input", updateCounter);
+submitBtn.addEventListener("click", commitIt);
+document.getElementById("btn-cancel").addEventListener("click", closeModal);
+modal.addEventListener("mousedown", e=>{ if(e.target===modal) closeModal(); });
+
+function commitIt(){
+  if(subject.value.trim().length===0) return;
+  const msg = subject.value.trim();
+  closeModal();
+  commits.forEach(c=>{ c.refs = c.refs.filter(r=>r!=="head" && r!=="origin"); });
+  extraCommits.forEach(c=>{ c.refs = c.refs.filter(r=>r!=="head" && r!=="origin"); });
+  const nid = "new" + Date.now();
+  extraCommits.unshift({
+    msg, sha: Math.floor(Math.random()*0xfffff).toString(16).padStart(6,"0"),
+    sub:"Nazim B. · à l'instant", id:nid,
+    lane:0, refs:["head","origin"], merge:false
+  });
+  headOnExtra = true;
+  if(pushDone){
+    pushDone = false;
+    document.getElementById("sb-sync").textContent = "À jour avec origin/main (1 nouveau commit local)";
+    document.getElementById("sb-sync").classList.remove("ok");
+  }
+  staged = [];
+  selectedCommit = null;
+  renderGraph();
+  renderFiles();
+  const sc = document.getElementById("graphscroll");
+  sc.scrollTop = 0;
+  updateWorkflow();
+  toast("Commit créé — « " + msg + " »");
+}
+
+/* ---------------- Push / fetch / pull ---------------- */
+function push(){
+  if(pushDone) return;
+  const b = document.getElementById("wf-push");
+  b.classList.add("loading");
+  b.disabled = true;
+  setTimeout(()=>{
+    b.classList.remove("loading");
+    pushDone = true;
+    renderGraph();
+    document.getElementById("main-ahead").textContent = "—";
+    const ro = document.getElementById("ref-origin");
+    if(ro) ro.textContent = "origin/main";
+    const oa = document.getElementById("origin-ahead");
+    if(oa) oa.textContent = "= synchronisé";
+    document.getElementById("sb-sync").textContent = "Synchronisé avec origin/main";
+    document.getElementById("sb-sync").classList.add("ok");
+    updateWorkflow();
+    toast("Poussé vers origin/main");
+  }, 700);
+}
+
+/* ---------------- File interactions ---------------- */
+document.getElementById("changeslist").addEventListener("click", e=>{
+  const stb = e.target.closest("[data-stage]");
+  const unstb = e.target.closest("[data-unstage]");
+  const fr = e.target.closest("[data-file]");
+  if(stb){
+    const path = stb.dataset.stage;
+    unstaged = unstaged.filter(p=>p!==path); staged.push(path);
+    selectedFile = path;
+    FILES[path].staged = true;
+    renderFiles();
+    toast("Indexé : " + path.split("/").pop());
+    return;
+  }
+  if(unstb){
+    const path = unstb.dataset.unstage;
+    staged = staged.filter(p=>p!==path); unstaged.push(path);
+    selectedFile = path;
+    FILES[path].staged = false;
+    renderFiles();
+    toast("Désindexé : " + path.split("/").pop());
+    return;
+  }
+  if(fr){
+    selectedFile = fr.dataset.file;
+    renderFiles();
+  }
+});
+document.getElementById("changeslist").addEventListener("keydown", e=>{
+  if(e.key==="Enter"||e.key===" "){
+    const stb = e.target.closest("[data-stage]");
+    const unstb = e.target.closest("[data-unstage]");
+    if(stb || unstb){ (e.target.closest("[data-file]")||e.target.closest("[data-stage]")||e.target.closest("[data-unstage]")).click(); return; }
+    const fr = e.target.closest("[data-file]");
+    if(fr){
+      selectedFile = fr.dataset.file;
+      renderFiles();
+    }
+  }
+});
+
+/* ---------------- Graph interactions ---------------- */
+document.getElementById("graphrows").addEventListener("click", e=>{
+  const m = e.target.closest("[data-select]");
+  if(!m) return;
+  selectedCommit = m.dataset.select;
+  renderGraph();
+  dbgCommit(selectedCommit);
+});
+document.getElementById("graphrows").addEventListener("keydown", e=>{
+  if(e.key==="Enter"||e.key===" "){ const m = e.target.closest("[data-select]"); if(m){ selectedCommit=m.dataset.select; renderGraph(); dbgCommit(selectedCommit);} }
+});
+function dbgCommit(id){
+  const cc = extraCommits.concat(commits).find(x=>x.id===id);
+  if(!cc) return;
+  document.getElementById("diff-path").textContent = "Historique — " + cc.sha;
+  document.getElementById("diff-pill").textContent = "C";
+  document.getElementById("diff-pill").className = "pill pill-M";
+  const bodyEl = document.getElementById("diffbody");
+  bodyEl.innerHTML = `<div class="phead" style="padding:6px 14px 8px"><span style="font-size:11px;color:var(--muted)">${cc.msg}</span></div>
+    <div class="empty" style="padding:20px"><div class="big">Impossible d'afficher le diff de ce commit</div>la maquette n'inclut pas le contenu binaire de l'historique complet.</div>`;
+}
+
+/* ---------------- Branches / misc ---------------- */
+document.getElementById("branchsel").addEventListener("click", ()=>{
+  toast("Sélecteur de branche — utilisez le panneau de gauche pour changer de branche");
+});
+document.querySelectorAll(".brow[data-branch]").forEach(b=>{
+  b.addEventListener("click", ()=>{
+    document.querySelectorAll(".brow.active").forEach(x=>x.classList.remove("active"));
+    b.classList.add("active");
+    document.getElementById("branchsel-name").textContent = b.dataset.branch;
+    document.getElementById("sb-branch").textContent = b.dataset.branch;
+    document.getElementById("repo-branch").textContent = "branche " + b.dataset.branch;
+    toast("Branche active : " + b.dataset.branch);
+    renderGraph();
+  });
+});
+document.getElementById("branchfilter").addEventListener("input", e=>{
+  const q = e.target.value.toLowerCase();
+  document.querySelectorAll(".brow").forEach(r=>{
+    r.style.display = r.textContent.toLowerCase().includes(q)||q==="" ? "" : "none";
+  });
+});
+
+/* ---------------- Theme menu ---------------- */
+const menu = document.getElementById("menupanel");
+document.getElementById("btn-settings").addEventListener("click", e=>{
+  e.stopPropagation();
+  menu.classList.toggle("open");
+  document.getElementById("btn-settings").setAttribute("aria-expanded", menu.classList.contains("open"));
+});
+document.querySelectorAll("[data-theme-set]").forEach(b=>{
+  b.addEventListener("click", ()=>{
+    setTheme(b.dataset.themeSet);
+    menu.classList.remove("open");
+  });
+});
+function setTheme(t){
+  document.documentElement.dataset.theme = t;
+  document.querySelectorAll("[data-check]").forEach(c=>c.textContent = (c.dataset.check===t)?"✓":"");
+  try{ localStorage.setItem("gm-theme", t); }catch(e){}
+}
+document.getElementById("btn-about").addEventListener("click", ()=>{
+  menu.classList.remove("open");
+  toast("GitMatrix v0.3.1 — client Git visuel gratuit, licence GPL-3.0");
+});
+document.addEventListener("click", e=>{
+  if(!e.target.closest("#menupanel") && !e.target.closest("#btn-settings")) menu.classList.remove("open");
+});
+document.getElementById("draftcard").addEventListener("click", ()=>{
+  toast("Sélectionnez un fichier dans le panneau Modifications pour afficher son diff");
+});
+document.getElementById("btn-refresh").addEventListener("click", ()=>{ toast("Références actualisées"); });
+document.getElementById("btn-clone").addEventListener("click", ()=>{
+  const f = "https://github.com/nazimboudeffa/gitmatrix.git";
+  toast("Clonage : " + f + " — hors périmètre de la maquette");
+});
+document.getElementById("btn-open").addEventListener("click", ()=>{ toast("Sélecteur de dossier — hors périmètre de la maquette"); });
+
+/* ---------------- Keyboard shortcuts ---------------- */
+document.addEventListener("keydown", e=>{
+  if(e.key==="Escape") closeModal();
+  if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==="s"){ e.preventDefault(); document.getElementById("wf-index").click(); }
+  if((e.ctrlKey||e.metaKey) && e.key==="Enter"){ e.preventDefault(); openModal(); }
+  if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==="p"){ e.preventDefault(); if(!pushDone) push(); }
+  if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==="o"){ e.preventDefault(); document.getElementById("btn-open").click(); }
+});
+
+/* ---------------- Toast ---------------- */
+let toastTimer;
+function toast(msg){
+  const t = document.getElementById("toast");
+  document.getElementById("toast-txt").textContent = msg;
+  t.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>t.classList.remove("show"), 2600);
+}
+
+/* ---------------- helpers ---------------- */
+function esc(s){ return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+
+/* ---------------- init ---------------- */
+staged = Object.keys(FILES).filter(k=>FILES[k].staged);
+unstaged = Object.keys(FILES).filter(k=>!FILES[k].staged);
+selectedFile = staged[0];
+try{ const saved = localStorage.getItem("gm-theme"); if(saved) setTheme(saved); else setTheme("nuit"); }catch(e){ setTheme("nuit"); }
+renderGraph();
+renderFiles();
+document.getElementById("sb-sync").textContent = syncText;
+</script>
+</body>
+</html>
