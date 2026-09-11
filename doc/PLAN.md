@@ -12,6 +12,10 @@ Cochez les cases au fur et à mesure.
 
 Ci-dessous, les fondamentaux pour qu'un dépôt réel soit utilisable au quotidien.
 
+> **Phase 1 close.** Les 3 items restants (diff entre deux commits, recherche,
+> zoom) sont reportés au backlog : du confort, pas des fondations. Priorité
+> donnée à la Phase Design.
+
 ### Remotes et synchronisation
 - [x] `repo.remotes()` : liste des remotes (origin, etc.) dans la couche core
 - [x] Afficher les branches distantes (`refs/remotes/`) dans le graphe
@@ -22,12 +26,12 @@ Ci-dessous, les fondamentaux pour qu'un dépôt réel soit utilisable au quotidi
 ### Diff par commit
 - [x] Sélectionner un commit ⮕ afficher son diff complet (vs son parent)
 - [x] Double-clic : naviguer vers la liste des fichiers changés par ce commit
-- [ ] Diff entre deux commits sélectionnés (Ctrl+clic)
+- [ ] Diff entre deux commits sélectionnés (Ctrl+clic) → reporté au backlog
 
 ### Interaction graphe
 - [x] Survol : tooltip avec message complet, auteur, date
-- [ ] Recherche de commits (Ctrl+F) avec surlignage
-- [ ] Zoom (Ctrl+mouse / touches + -)
+- [ ] Recherche de commits (Ctrl+F) avec surlignage → reporté au backlog
+- [ ] Zoom (Ctrl+mouse / touches + -) → reporté au backlog
 
 ---
 
@@ -125,6 +129,10 @@ s'intercale entre les phases fonctionnelles — chaque version doit embarquer
 ---
 
 ## Idées long terme (backlog)
+
+- Diff entre deux commits sélectionnés (Ctrl+clic)
+- Recherche de commits (Ctrl+F) avec surlignage
+- Zoom du graphe (Ctrl+mouse / touches + −)
 
 - Git LFS display
 - Git submodules
