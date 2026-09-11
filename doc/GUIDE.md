@@ -171,12 +171,23 @@ python -m gitmatrix -r chemin\vers\mon\repo
    (des commits locaux à pousser).
 6. Cliquez **Commit**, écrivez le **sujet** (obligatoire, ~50 caractères) et le
    **détail** (optionnel), puis validez.
+
+   > La fenêtre de commit ne s'ouvre que s'il y a des changements **indexés**.
+   > Rien d'indexé ? Un message vous rappelle de passer d'abord par l'étape 1
+   > (*Index*).
+
 7. Le nouveau commit apparaît dans le **graphe**.
 8. Dans le graphe : **clic simple** → sélection (mise en évidence + barre d'état) ;
    **double-clic** → fenêtre détaillée du commit avec la liste des fichiers
    modifiés, leurs statistiques (`+N −M`) et un diff navigable.
 9. Quand l'étape 3 du workflow est mise en évidence, cliquez **Push** (ou **Ctrl+P**)
    pour publier les commits locaux.
+
+   > Si votre branche a déjà un upstream et que tout est déjà poussé, **Push**
+   > affiche « Nothing to push » au lieu de lancer une commande inutile. Si la
+   > branche n'a encore jamais été poussée, le premier **Push** crée son upstream
+   > (`--set-upstream`).
+
 10. La **barre d'état** montre en permanence la branche active, le dépôt est-il
     modifié, et les nombres *staged* / *unstaged*.
 

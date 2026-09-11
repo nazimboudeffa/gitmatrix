@@ -497,6 +497,13 @@ class MainWindow(QMainWindow):
         if self._repo is None:
             QMessageBox.information(self, "GitMatrix", "Open a repository first.")
             return
+        if not any(c.staged for c in self._repo.changes()):
+            QMessageBox.information(
+                self,
+                "GitMatrix",
+                "No staged changes to commit.\nStage some files first (Step 1 · Index).",
+            )
+            return
         dialog = CommitDialog(self)
         if dialog.exec():
             try:
@@ -530,6 +537,12 @@ class MainWindow(QMainWindow):
     def _push(self) -> None:
         if self._repo is None:
             QMessageBox.information(self, "GitMatrix", "Open a repository first.")
+            return
+        status = self._repo.upstream_status()
+        if status is not None and status[0] <= 0:
+            QMessageBox.information(
+                self, "GitMatrix", "Nothing to push — local branch is up to date."
+            )
             return
         try:
             output = self._repo.push()
