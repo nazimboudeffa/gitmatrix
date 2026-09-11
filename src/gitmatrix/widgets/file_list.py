@@ -81,7 +81,7 @@ class FileListWidget(QWidget):
         return w, tree
 
     def _group_header(self, label: str) -> QLabel:
-        lbl = QLabel(label.upper())
+        lbl = QLabel(label)
         lbl.setObjectName("GroupHeader")
         return lbl
 

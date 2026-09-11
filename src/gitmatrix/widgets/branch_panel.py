@@ -69,9 +69,10 @@ class BranchPanel(QListWidget):
         # Remote branches (display only, not editable)
         remotes = self._repo.all_remote_branches()
         if remotes:
-            sep = QListWidgetItem("REMOTES")
+            remote_color = current_color("muted")
+            sep = QListWidgetItem("Remotes")
             sep.setFlags(Qt.ItemFlag.NoItemFlags)
-            sep.setForeground(QColor("#7b61b8"))
+            sep.setForeground(QColor(remote_color))
             f = QFont(self.font())
             f.setPointSize(9)
             f.setBold(True)
@@ -80,7 +81,7 @@ class BranchPanel(QListWidget):
             for r in sorted(remotes, key=lambda x: x.name):
                 item = QListWidgetItem()
                 item.setData(Qt.ItemDataRole.UserRole, r)
-                row = self._row_widget(r.name, "#7b61b8", False, None)
+                row = self._row_widget(r.name, remote_color, False, None)
                 item.setSizeHint(row.sizeHint())
                 self.addItem(item)
                 self.setItemWidget(item, row)

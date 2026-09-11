@@ -489,7 +489,6 @@ QLabel#GroupHeader {
     font-size: 10px;
     font-weight: 600;
     letter-spacing: 0.08em;
-    text-transform: uppercase;
     color: {muted};
     background-color: transparent;
     border: none;
