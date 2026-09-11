@@ -8,29 +8,36 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QHBoxLayout,
     QPlainTextEdit,
+    QLineEdit,
     QDialogButtonBox,
     QLabel,
-    QPushButton,
 )
 
 
 class CommitDialog(QDialog):
-    """Multi-line commit message input with counter + validation."""
+    """Two-field commit message (subject + detail) with counter + validation."""
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
         self.setWindowTitle("Create a commit")
         self.setMinimumWidth(480)
-        self.setMinimumHeight(280)
+        self.setMinimumHeight(320)
 
         layout = QVBoxLayout(self)
-        layout.addWidget(QLabel("Commit message:"))
-        self._editor = QPlainTextEdit()
-        self._editor.setPlaceholderText("Summary of changes…")
-        self._editor.textChanged.connect(self._on_text_changed)
-        layout.addWidget(self._editor)
 
-        # Character counter + subject/body hint
+        layout.addWidget(QLabel("Subject — main message:"))
+        self._subject = QLineEdit()
+        self._subject.setPlaceholderText("Summarize the change (50 chars recommended)")
+        self._subject.setMaxLength(80)
+        self._subject.textChanged.connect(self._on_text_changed)
+        layout.addWidget(self._subject)
+
+        layout.addWidget(QLabel("Detail — optional:"))
+        self._body = QPlainTextEdit()
+        self._body.setPlaceholderText("Explain the motivation and details…")
+        self._body.textChanged.connect(self._on_text_changed)
+        layout.addWidget(self._body, 1)
+
         self._counter = QLabel("0 character")
         self._counter.setAlignment(Qt.AlignmentFlag.AlignRight)
         self._counter.setObjectName("Counter")
@@ -55,17 +62,19 @@ class CommitDialog(QDialog):
         self._ok_btn.style().polish(self._ok_btn)
 
     def _on_text_changed(self) -> None:
-        text = self._editor.toPlainText()
-        subject = text.splitlines()[0] if text.splitlines() else ""
-        body = text[len(subject) :].strip()
-        n = len(text)
-        lbl = f"{n} character{'s' if n > 1 else ''}"
+        subject = self._subject.text().strip()
+        body = self._body.toPlainText()
+        total = len(subject) + len(body)
+        lbl = f"{total} character{'s' if total > 1 else ''}"
         if len(subject) > 50:
             lbl += " — long subject (50 chars recommended max)"
         self._counter.setText(lbl)
-        # Le bouton n'est activable que si un sujet non vide est présent
-        self._ok_btn.setEnabled(bool(subject.strip()))
-        self._style_ok()
+        self._ok_btn.setEnabled(bool(subject))
 
     def message(self) -> str:
-        return self._editor.toPlainText()
+        """Message complet : sujet + détail séparés par une ligne vide."""
+        subject = self._subject.text().strip()
+        body = self._body.toPlainText().strip()
+        if body:
+            return f"{subject}\n\n{body}"
+        return subject

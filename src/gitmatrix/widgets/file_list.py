@@ -14,7 +14,7 @@ from gitmatrix.core.git_repo import FileChange, FileDiff
 class FileListWidget(QTreeWidget):
     """Affiche les fichiers staged et unstaged avec actions contextuelles."""
 
-    file_selected = Signal(object)  # FileChange
+    file_activated = Signal(object)  # FileChange (double-clic → ouvre un diff)
     commit_file_selected = Signal(object)  # FileDiff (mode "commit")
     stage_requested = Signal(object)  # FileChange
     unstage_requested = Signal(object)  # FileChange
@@ -38,7 +38,7 @@ class FileListWidget(QTreeWidget):
         self.header().setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.customContextMenuRequested.connect(self._show_menu)
-        self.itemClicked.connect(self._on_clicked)
+        self.itemDoubleClicked.connect(self._on_double_clicked)
         self._commit_mode: Optional[str] = None  # sha court en mode "fichiers d'un commit"
 
     # ------------------------------------------------------------------
@@ -119,10 +119,10 @@ class FileListWidget(QTreeWidget):
         data = item.data(0, Qt.ItemDataRole.UserRole)
         return data if isinstance(data, FileDiff) else None
 
-    def _on_clicked(self, item, column) -> None:
+    def _on_double_clicked(self, item, column) -> None:
         data = item.data(0, Qt.ItemDataRole.UserRole)
         if isinstance(data, FileChange):
-            self.file_selected.emit(data)
+            self.file_activated.emit(data)
         elif isinstance(data, FileDiff):
             self.commit_file_selected.emit(data)
 
@@ -140,7 +140,4 @@ class FileListWidget(QTreeWidget):
                 a.triggered.connect(
                     lambda _=False, fc=file_change: self.stage_requested.emit(fc)
                 )
-        menu.addSeparator()
-        menu.addAction("Stage All", self.stage_all_requested.emit)
-        menu.addAction("Unstage All", self.unstage_all_requested.emit)
         menu.exec(self.viewport().mapToGlobal(pos))

@@ -14,6 +14,8 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QToolBar,
+    QFrame,
+    QPushButton,
     QFileDialog,
     QMessageBox,
     QSizePolicy,
@@ -26,9 +28,10 @@ from gitmatrix.core.git_repo import GitMatrixError, GitRepo, FileChange, FileDif
 from gitmatrix.theme import current_qss, themeChanged
 from gitmatrix.widgets.commit_graph import CommitGraphWidget
 from gitmatrix.widgets.file_list import FileListWidget
-from gitmatrix.widgets.diff_viewer import DiffViewer
 from gitmatrix.widgets.branch_panel import BranchPanel
 from gitmatrix.ui.commit_dialog import CommitDialog
+from gitmatrix.ui.commit_detail_dialog import CommitDetailDialog
+from gitmatrix.ui.diff_dialog import DiffDialog
 from gitmatrix.ui.about_dialog import AboutDialog
 from gitmatrix.ui.clone_dialog import CloneDialog
 from gitmatrix.ui.settings_dialog import SettingsDialog
@@ -48,7 +51,6 @@ class MainWindow(QMainWindow):
         self.setStyleSheet(current_qss())
 
         self._repo: Optional[GitRepo] = None
-        self._current_commit = None
         self._commit_mode_sha: Optional[str] = None
 
         # ------------------------------------------------------------------
@@ -57,17 +59,12 @@ class MainWindow(QMainWindow):
         self.commit_graph = CommitGraphWidget()
 
         self.files = FileListWidget()
-        self.diff_viewer = DiffViewer()
         self.branches = BranchPanel()
 
-        # Panneau de droite : liste des fichiers + diff
-        right_side = QSplitter(Qt.Orientation.Vertical)
-        right_side.addWidget(self._titled("Changes", self.files))
-        right_side.addWidget(self._titled("Diff", self.diff_viewer))
-        right_side.setStretchFactor(0, 1)
-        right_side.setStretchFactor(1, 2)
+        # Panneau de droite : Changes + workflow (stage → commit → push)
+        right_side = self._build_right_panel()
 
-        # Splitter principal : branches | graphe | fichiers+diff
+        # Splitter principal : branches | graphe | fichiers
         main_split = QSplitter(Qt.Orientation.Horizontal)
         main_split.addWidget(self._titled("Branches", self.branches))
         main_split.addWidget(self.commit_graph)
@@ -104,40 +101,12 @@ class MainWindow(QMainWindow):
         self._branch_btn = self._make_branch_button()
         toolbar.addWidget(self._branch_btn)
 
-        # Espaceur gauche : centre le bloc workflow (façon GitKraken)
+        # Espaceur gauche : centre le bloc réseau
         toolbar.addWidget(self._stretch())
 
-        # Groupe 3 : Récupérer (avant le travail) — fetch / pull
+        # Groupe 3 : Réseau (milieu) — fetch / pull
         act_fetch = toolbar.addAction(_icon("fetch"), "Fetch", self._fetch)
         act_pull = toolbar.addAction(_icon("pull"), "Pull", self._pull)
-        toolbar.addSeparator()
-
-        # Groupe 4 : Staging — préparer le contenu du commit
-        act_stage_all = toolbar.addAction(
-            _icon("stage-all"), "Stage All", self._stage_all
-        )
-        act_stage_all.setToolTip("Stage all (Ctrl+S)")
-        self._set_shortcut(act_stage_all, "Ctrl+S")
-        act_unstage_all = toolbar.addAction(
-            _icon("unstage-all"), "Unstage All", self._unstage_all
-        )
-        self._mark_danger(act_unstage_all)
-
-        # Groupe 5 : Commit (action primaire, dorée)
-        toolbar.addSeparator()
-        act_commit = toolbar.addAction(_icon("commit"), "Commit", self._open_commit_dialog)
-        self._commit_action = act_commit
-        b = toolbar.widgetForAction(act_commit)
-        if isinstance(b, QToolButton):
-            b.setObjectName("ActionCommit")
-            b.setToolTip("Create a commit (Ctrl+Return)")
-            self._set_shortcut(act_commit, "Ctrl+Return")
-
-        # Groupe 6 : Publier (après le commit) — push
-        toolbar.addSeparator()
-        act_push = toolbar.addAction(_icon("push"), "Push", self._push)
-        act_push.setToolTip("Pousser la branche active (Ctrl+P)")
-        self._set_shortcut(act_push, "Ctrl+P")
 
         # Espaceur droit : équilibre le bloc central
         toolbar.addWidget(self._stretch())
@@ -175,8 +144,8 @@ class MainWindow(QMainWindow):
         # Connexions
         # ------------------------------------------------------------------
         self.commit_graph.commit_selected.connect(self._on_commit_selected)
-        self.commit_graph.commit_activated.connect(self._on_commit_activated)
-        self.files.file_selected.connect(self._on_file_selected)
+        self.commit_graph.commit_activated.connect(self._open_commit_detail)
+        self.files.file_activated.connect(self._open_file_diff)
         self.files.commit_file_selected.connect(self._on_commit_file_selected)
         self.files.stage_requested.connect(self._stage_file)
         self.files.unstage_requested.connect(self._unstage_file)
@@ -184,6 +153,15 @@ class MainWindow(QMainWindow):
         self.files.unstage_all_requested.connect(self._unstage_all)
         self.branches.branch_checked.connect(self._checkout_branch)
         themeChanged.connect(self._on_theme_changed)
+
+        # Raccourcis du workflow (gardés quand les boutons quittent la toolbar)
+        QShortcut(QKeySequence("Ctrl+S"), self).activated.connect(self._stage_all)
+        QShortcut(QKeySequence("Ctrl+Return"), self).activated.connect(
+            lambda: self._open_commit_dialog() if self._repo is not None else None
+        )
+        QShortcut(QKeySequence("Ctrl+P"), self).activated.connect(
+            lambda: self._push() if self._repo is not None else None
+        )
 
         # Désactiver les actions tant qu'aucun dépôt n'est ouvert
         self._set_actions_enabled(False)
@@ -251,11 +229,6 @@ class MainWindow(QMainWindow):
                     lambda _=False, n=b.name: self._checkout_branch(n)
                 )
 
-    def _mark_danger(self, action: QAction) -> None:
-        b = self._toolbar.widgetForAction(action)
-        if isinstance(b, QToolButton):
-            b.setObjectName("ActionDanger")
-
     @staticmethod
     def _chip(text: str, kind: str = "") -> QLabel:
         lbl = QLabel(text)
@@ -295,6 +268,13 @@ class MainWindow(QMainWindow):
                 continue
             a.setEnabled(enabled)
         self._branch_btn.setEnabled(enabled)
+        for btn in (
+            self._btn_stage_all,
+            self._btn_unstage_all,
+            self._btn_commit,
+            self._btn_push,
+        ):
+            btn.setEnabled(enabled)
 
     # ------------------------------------------------------------------
     # Constructeurs de panneaux
@@ -309,6 +289,103 @@ class MainWindow(QMainWindow):
         layout.addWidget(label)
         layout.addWidget(widget, 1)
         return container
+
+    def _build_right_panel(self) -> QWidget:
+        """Panneau de droite : Changes + workflow (Index → Commit → Push)."""
+        panel = QWidget()
+        layout = QVBoxLayout(panel)
+        layout.setContentsMargins(6, 6, 6, 6)
+        layout.setSpacing(6)
+
+        header = QHBoxLayout()
+        header.setSpacing(6)
+        title = QLabel("Changes")
+        title.setObjectName("PanelTitle")
+        header.addWidget(title)
+        self._changes_count = QLabel("0")
+        self._changes_count.setObjectName("HeaderCount")
+        self._changes_count.setVisible(False)
+        header.addWidget(self._changes_count)
+        header.addStretch(1)
+
+        self._btn_stage_all = self._push_btn(
+            _icon("stage-all"), "Stage All", "Stage all changes (Ctrl+S)"
+        )
+        self._btn_stage_all.setObjectName("PanelAction")
+        self._btn_stage_all.clicked.connect(self._stage_all)
+        self._btn_unstage_all = self._push_btn(
+            _icon("unstage-all"), "Unstage All", "Unstage all changes"
+        )
+        self._btn_unstage_all.setObjectName("PanelAction")
+        self._btn_unstage_all.clicked.connect(self._unstage_all)
+        header.addWidget(self._btn_stage_all)
+        header.addWidget(self._btn_unstage_all)
+        layout.addLayout(header)
+
+        layout.addWidget(self.files, 1)
+
+        box = QFrame()
+        box.setObjectName("WorkflowBox")
+        box_layout = QVBoxLayout(box)
+        box_layout.setContentsMargins(12, 8, 12, 10)
+        box_layout.setSpacing(8)
+
+        strip = QHBoxLayout()
+        strip.setSpacing(6)
+        self._wf_labels: dict = {}
+        for key, text in (
+            ("index", "1 · Index"),
+            ("commit", "2 · Commit"),
+            ("push", "3 · Push"),
+        ):
+            lbl = QLabel(text)
+            lbl.setObjectName("WorkflowStep")
+            strip.addWidget(lbl)
+            self._wf_labels[key] = lbl
+            if key != "push":
+                arr = QLabel("→")
+                arr.setObjectName("WorkflowArrow")
+                strip.addWidget(arr)
+        strip.addStretch(1)
+        box_layout.addLayout(strip)
+
+        actions = QHBoxLayout()
+        actions.setSpacing(8)
+        self._btn_commit = self._push_btn(
+            _icon("commit"), "Commit", "Create a commit (Ctrl+Return)"
+        )
+        self._btn_commit.setObjectName("PanelCommit")
+        self._btn_commit.clicked.connect(self._open_commit_dialog)
+        self._btn_push = self._push_btn(
+            _icon("push"), "Push", "Push local commits (Ctrl+P)"
+        )
+        self._btn_push.setObjectName("PanelPush")
+        self._btn_push.clicked.connect(self._push)
+        actions.addWidget(self._btn_commit, 2)
+        actions.addWidget(self._btn_push, 1)
+        box_layout.addLayout(actions)
+
+        layout.addWidget(box)
+        return panel
+
+    @staticmethod
+    def _push_btn(icon: QIcon, text: str, tip: str) -> QPushButton:
+        btn = QPushButton(icon, text)
+        btn.setToolTip(tip)
+        btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        return btn
+
+    def _update_workflow(self, unstaged: int, staged: int) -> None:
+        """Met en évidence l'étape suivante du workflow dans le panneau droit."""
+        steps = {"index": unstaged > 0, "commit": staged > 0, "push": False}
+        if self._repo is not None:
+            status = self._repo.upstream_status()
+            if status:
+                steps["push"] = status[0] > 0
+        for key, lbl in self._wf_labels.items():
+            lbl.setProperty("active", steps[key])
+            lbl.style().unpolish(lbl)
+            lbl.style().polish(lbl)
 
     def load_repo(self, path: str) -> bool:
         """Charge un dépôt : active la toolbar puis rafraîchit l'affichage."""
@@ -354,23 +431,15 @@ class MainWindow(QMainWindow):
             self.branches.refresh()
             self._refresh_branch_menu()
             self.files.set_changes(self._repo.changes())
-            # re-afficher le diff du commit sélectionné si présent
-            self._refresh_commit_detail()
         except GitMatrixError as exc:
             QMessageBox.warning(self, "Error", str(exc))
         self._update_status()
 
-    def _refresh_commit_detail(self) -> None:
-        if self._current_commit is not None:
-            self._show_commit_diff(self._current_commit)
-
     def _on_commit_selected(self, commit) -> None:
-        self._current_commit = commit
-        self._show_commit_diff(commit)
         self._update_status(commit=commit)
 
-    def _on_commit_activated(self, commit) -> None:
-        """Double-clic sur un commit : liste les fichiers qu'il a modifiés."""
+    def _open_commit_detail(self, commit) -> None:
+        """Double-clic sur un commit : fenêtre détaillée (fichiers + stats + diff)."""
         if self._repo is None:
             return
         try:
@@ -378,8 +447,8 @@ class MainWindow(QMainWindow):
         except GitMatrixError as exc:
             QMessageBox.warning(self, "Error", str(exc))
             return
-        self._commit_mode_sha = commit.hexsha
-        self.files.set_commit_files(diffs, commit.short_sha)
+        dialog = CommitDetailDialog(commit, diffs, self)
+        dialog.exec()
 
     def _on_commit_file_selected(self, file_diff: FileDiff) -> None:
         if self._repo is None or self._commit_mode_sha is None:
@@ -390,29 +459,15 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, "Error", str(exc))
             return
         header = f"{self._commit_mode_sha[:8]} · {file_diff.path}"
-        self.diff_viewer.show_diff(found, title=header)
+        DiffDialog(found, header, self).exec()
 
-    def _show_commit_diff(self, commit) -> None:
-        """Affiche le diff d'un commit (tous ses fichiers) dans le DiffViewer."""
-        if self._repo is None:
-            return
-        try:
-            diffs = self._repo.diff_commit(commit.hexsha)
-        except GitMatrixError as exc:
-            QMessageBox.warning(self, "Error", str(exc))
-            return
-        # Affiche le premier diff ; l'en-tête mentionne le nombre de fichiers
-        if diffs:
-            header = f"{commit.short_sha} · {len(diffs)} modified file(s)"
-            self.diff_viewer.show_diff(diffs[0], title=header)
-        else:
-            self.diff_viewer.show_diff(None, title=f"{commit.short_sha} · no changes")
-
-    def _on_file_selected(self, file_change: FileChange) -> None:
+    def _open_file_diff(self, file_change: FileChange) -> None:
+        """Double-clic sur un fichier : ouvre son diff dans une fenêtre."""
         if self._repo is None:
             return
         diff = self._repo.diff(file_change.path)
-        self.diff_viewer.show_diff(diff, title=file_change.path)
+        scope = "staged" if file_change.staged else "working tree"
+        DiffDialog(diff, f"{file_change.path}  ({scope})", self).exec()
 
     def _stage_file(self, file_change: FileChange) -> None:
         if self._repo is None:
@@ -446,7 +501,6 @@ class MainWindow(QMainWindow):
         if dialog.exec():
             try:
                 new_sha = self._repo.commit_all(dialog.message())
-                self._current_commit = self.commit_graph.selected_commit
                 self.commit_graph.select_commit(new_sha)
             except GitMatrixError as exc:
                 QMessageBox.critical(self, "Error", str(exc))
@@ -551,6 +605,11 @@ class MainWindow(QMainWindow):
         self._sb_unstaged.setText(f"{n_unstaged} unstaged")
         self._sb_staged_w.setVisible(n_staged > 0)
         self._sb_unstaged_w.setVisible(n_unstaged > 0)
+
+        total = n_staged + n_unstaged
+        self._changes_count.setText(str(total))
+        self._changes_count.setVisible(total > 0)
+        self._update_workflow(n_unstaged, n_staged)
 
         if commit is not None:
             self._sb_commit.setText(f"{commit.short_sha}  {commit.subject}")

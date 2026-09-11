@@ -326,6 +326,97 @@ QLabel#PanelTitle {
     letter-spacing: 0.03em;
 }
 
+/* ── Panneau droit : boutons + boîte de workflow ────────────────── */
+QPushButton#PanelAction {
+    background-color: {surface_hover};
+    border: 1px solid {border};
+    border-radius: 4px;
+    color: {fg};
+    font-size: 11px;
+    font-weight: 500;
+    padding: 4px 9px;
+}
+QPushButton#PanelAction:hover {
+    background-color: {widget_hover};
+    border-color: {border_hover};
+}
+QPushButton#PanelAction:disabled {
+    color: {faint};
+    background-color: {surface_pressed};
+    border-color: {border_soft};
+}
+
+QFrame#WorkflowBox {
+    background-color: {surface};
+    border: 1px solid {border_soft};
+    border-radius: 6px;
+}
+
+QLabel#WorkflowStep {
+    font-family: "Cascadia Mono", "JetBrains Mono", "Consolas", monospace;
+    font-size: 10px;
+    color: {faint};
+    border-radius: 3px;
+    padding: 2px 7px;
+}
+QLabel#WorkflowStep[active="true"] {
+    color: {accent};
+    background-color: {surface_hover};
+    font-weight: 600;
+}
+QLabel#WorkflowArrow {
+    color: {faint};
+    font-size: 12px;
+    background-color: transparent;
+    border: none;
+    padding: 0;
+}
+
+QPushButton#PanelCommit {
+    background-color: {accent};
+    border: 1px solid {accent};
+    border-radius: 4px;
+    color: {accent_fg};
+    font-weight: 600;
+    font-size: 12px;
+    padding: 7px 14px;
+}
+QPushButton#PanelCommit:hover {
+    background-color: {accent_hover};
+    border-color: {accent_hover};
+}
+QPushButton#PanelCommit:pressed {
+    background-color: {accent_pressed};
+    border-color: {accent_pressed};
+}
+QPushButton#PanelPush {
+    background-color: {surface_hover};
+    border: 1px solid {border};
+    border-radius: 4px;
+    color: {fg};
+    font-size: 12px;
+    font-weight: 500;
+    padding: 7px 14px;
+}
+QPushButton#PanelPush:hover {
+    background-color: {widget_hover};
+    border-color: {border_hover};
+}
+QPushButton#PanelCommit:disabled,
+QPushButton#PanelPush:disabled {
+    color: {faint};
+    background-color: {surface_pressed};
+    border-color: {border_soft};
+}
+
+QPlainTextEdit#DiffDialogViewer {
+    background-color: {bg};
+    border: 1px solid {border_soft};
+    border-radius: 4px;
+    padding: 6px;
+    color: {muted};
+}
+
 QMenu {
     background-color: {surface};
     border: 1px solid {border};
@@ -418,6 +509,26 @@ QLabel#StatusChip[chip="dirty"] {
 /* Pastille ronde dans les chips de la status bar */
 QLabel#StatusDot {
     background-color: transparent;
+}
+
+/* Fenêtre de détail d'un commit (double-clic) */
+QLabel#CommitDetailDialogSubject {
+    color: {fg};
+    font-size: 14px;
+    font-weight: 600;
+}
+QLabel#CommitDetailDialogMeta {
+    font-family: "Cascadia Mono", "JetBrains Mono", "Consolas", monospace;
+    font-size: 11px;
+    color: {muted};
+}
+QDialog QListWidget {
+    font-size: 12px;
+}
+QLabel#DiffDialogTitle {
+    color: {fg};
+    font-size: 13px;
+    font-weight: 600;
 }
 """
 

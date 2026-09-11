@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Optional
+from typing import List, Optional
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor, QTextCharFormat, QTextCursor, QFont
@@ -41,22 +41,28 @@ class DiffViewer(QPlainTextEdit):
 
     def show_diff(self, diff: Optional[FileDiff], title: Optional[str] = None) -> None:
         """Affiche un FileDiff ; ``title`` optionnel pour l'en-tête de fichier."""
+        self.show_diffs([diff] if diff is not None else [], title or "")
+
+    def show_diffs(self, diffs: List[FileDiff], title: Optional[str] = None) -> None:
+        """Affiche plusieurs FileDiff (diff complet d'un commit) à la suite."""
         self.clear()
-        if diff is None:
+        if not diffs:
             return
 
         cursor = self.textCursor()
         cursor.beginEditBlock()
-        self._line(cursor, f"━━ {title or diff.path} ━━", "meta")
-
-        if not diff.hunks:
-            self._line(cursor, "", "ctx")
-            self._line(
-                cursor,
-                "(no text content to show — binary or empty file)",
-                "meta",
-            )
-        else:
+        if title:
+            self._line(cursor, f"━━ {title} ━━", "meta")
+        for diff in diffs:
+            self._line(cursor, f"━━ {diff.path} ━━", "meta")
+            if not diff.hunks:
+                self._line(cursor, "", "ctx")
+                self._line(
+                    cursor,
+                    "(no text content to show — binary or empty file)",
+                    "meta",
+                )
+                continue
             for line in diff.hunks:
                 self._line(cursor, line["text"], line["type"])
         cursor.endEditBlock()

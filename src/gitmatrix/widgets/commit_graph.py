@@ -270,17 +270,11 @@ class CommitGraphWidget(QAbstractScrollArea):
                 )
             )
 
-        painter.setPen(QPen(color, 2))
-        painter.setBrush(color.darker(140))
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.setBrush(color)
         painter.drawEllipse(
             QRectF(x - NODE_RADIUS, y - NODE_RADIUS, NODE_RADIUS * 2, NODE_RADIUS * 2)
         )
-
-        # point central
-        painter.setPen(Qt.PenStyle.NoPen)
-        painter.setBrush(color)
-        inner = max(2, NODE_RADIUS - 3)
-        painter.drawEllipse(QRectF(x - inner, y - inner, inner * 2, inner * 2))
 
         text_x = x + NODE_RADIUS + 8
         if text_x > self._content_width:

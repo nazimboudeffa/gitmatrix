@@ -115,12 +115,14 @@ python -m gitmatrix -r chemin\vers\mon\repo
 ### 2.2 La fenêtre
 
 ```
-┌──────────┬─────────────────────────────┬──────────────────────┐
-│ Branches │   GRAPHE DES COMMITS        │  Modifications       │
-│          │  (cercles + lignes colorées)│  (liste des fichiers)│
-│          │                             ├──────────────────────┤
-│          │                             │  Diff (aperçu code)  │
-└──────────┴─────────────────────────────┴──────────────────────┘
+┌──────────┬─────────────────────────────┬──────────────────────────────┐
+│ Branches │   GRAPHE DES COMMITS        │  Changes (+ compteur)        │
+│          │  (cercles + lignes colorées)│  [Stage All] [Unstage All]   │
+│          │                             │  (liste des fichiers)        │
+│          │                             ├──────────────────────────────┤
+│          │                             │  1 Index → 2 Commit → 3 Push │
+│          │                             │  [Commit]  [Push]            │
+└──────────┴─────────────────────────────┴──────────────────────────────┘
 ```
 
 - **Graphe** : chaque cercle = un commit ; les lignes colorées relient un commit à
@@ -128,10 +130,15 @@ python -m gitmatrix -r chemin\vers\mon\repo
 - **Badges** à droite des commits : 🟨 **HEAD** (position courante),
   🟩 branche locale (`main`), 🟫 tag (`v1.0`).
 - **Branches** (gauche) : la branche active porte une étoile **★**.
-- **Modifications** (haut droite) : deux groupes, *Staged* (prêtes à committer)
-  et *Changes* (non indexées, `U` = fichier non suivi).
-- **Diff** (bas droite) : le contenu du fichier sélectionné, additions en vert,
-  suppressions en rouge.
+- **Changes** (droite) : deux groupes, *Staged* (prêtes à committer)
+  et *Changes* (non indexées, `U` = fichier non suivi). Les boutons
+  **Stage All** / **Unstage All** se trouvent dans l'en-tête du panneau.
+- **Workflow** (bas droite) : un bloc *Index → Commit → Push* met en évidence
+  l'étape en cours — il y a des changements non indexés (1), de l'index prêt à
+  committer (2), ou des commits locaux à pousser (3). Les boutons
+  **Commit** (doré, action principale) et **Push** s'y trouvent.
+- **Diff** : il n'y a plus de panneau fixe — un **double-clic** sur un fichier
+  ouvre son diff dans une fenêtre dédiée.
 
 ### 2.3 Barre d'outils
 
@@ -143,29 +150,35 @@ python -m gitmatrix -r chemin\vers\mon\repo
 | Fetch         | —            | Récupère les branches de tous les remotes |
 | Pull          | —            | Récupère et fusionne les changements du remote |
 | Branche       | —            | Affiche la branche active ; le menu permet de basculer |
-| Stage All     | Ctrl+S       | Indexe tous les changements |
-| Unstage All   | —            | Dé-indexe tout |
-| Commit        | Ctrl+Retour  | Ouvre la fenêtre de commit |
-| Push          | Ctrl+P       | Pousse la branche active (crée l'upstream si besoin) |
-| À propos      | —            | Info + lien de soutien |
+| Paramètres    | —            | Réglages + À propos |
 
-> La barre d'outils est organisée par zones : à gauche le **contexte** (ouvrir,
-> actualiser, choisir/créer une branche), au centre le **workflow** Git
-> (Fetch/Pull, staging, Commit/Push). **Commit** est le bouton principal (doré).
+> La barre d'outils est volontairement épurée : au centre, seuls **Fetch** et
+> **Pull** (le réseau). Les actions du workflow — **Stage All**, **Unstage All**,
+> **Commit**, **Push** — vivent désormais dans le **panneau de droite**, dans
+> l'ordre du workflow (Index → Commit → Push). Leurs raccourcis restent actifs :
+> **Ctrl+S** (Stage All), **Ctrl+Retour** (Commit), **Ctrl+P** (Push).
 
 ### 2.4 Le workflow typique
 
 1. Ouvrez le dépôt.
-2. Dans **Modifications**, vérifiez ce qui a changé.
-3. Cliquez un fichier → son **Diff** s'affiche en bas.
-4. Cliquez-droit sur un fichier → **Stage** (ou passez la souris sur **Stage All**).
-5. Cliquez **Commit…**, écrivez un message, validez.
-6. Le nouveau commit apparaît dans le **graphe**.
-7. Dans le graphe, **cliquez** un commit pour voir le diff qu'il a introduit,
-   **double-cliquez** pour lister les fichiers modifiés par ce commit dans le
-   panneau *Modifications* (un clic sur un de ces fichiers affiche son diff).
-8. La **barre d'état** montre en permanence la branche active, le dépôt est-il
-   modifié, et les nombres *staged* / *unstaged*.
+2. Dans **Changes**, vérifiez ce qui a changé (compteur dans l'en-tête).
+3. **Double-cliquez** un fichier → une fenêtre s'ouvre avec son diff
+   (additions en vert, suppressions en rouge).
+4. **Clic droit** sur un fichier → **Stage** (ou **Unstage** s'il est indexé) ;
+   ou utilisez **Stage All** / **Unstage All** dans l'en-tête du panneau.
+5. Le bloc **Workflow** (bas droite) indique où vous en êtes :
+   1 *Index* (des changements à indexer), 2 *Commit* (de l'index prêt), 3 *Push*
+   (des commits locaux à pousser).
+6. Cliquez **Commit**, écrivez le **sujet** (obligatoire, ~50 caractères) et le
+   **détail** (optionnel), puis validez.
+7. Le nouveau commit apparaît dans le **graphe**.
+8. Dans le graphe : **clic simple** → sélection (mise en évidence + barre d'état) ;
+   **double-clic** → fenêtre détaillée du commit avec la liste des fichiers
+   modifiés, leurs statistiques (`+N −M`) et un diff navigable.
+9. Quand l'étape 3 du workflow est mise en évidence, cliquez **Push** (ou **Ctrl+P**)
+   pour publier les commits locaux.
+10. La **barre d'état** montre en permanence la branche active, le dépôt est-il
+    modifié, et les nombres *staged* / *unstaged*.
 
 ### 2.5 Gérer les branches
 
