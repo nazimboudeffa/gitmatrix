@@ -16,7 +16,7 @@ from PySide6.QtWidgets import QAbstractScrollArea, QToolTip
 
 from gitmatrix.core.git_repo import CommitInfo, GitRepo, RefInfo
 from gitmatrix.models.graph import GraphLayout, GraphNode
-from gitmatrix.theme import current_color, current_palette
+from gitmatrix.theme import graph_color, graph_palette, branch_color_map
 
 ROW_HEIGHT = 42
 COLUMN_WIDTH = 22
@@ -42,6 +42,8 @@ class CommitGraphWidget(QAbstractScrollArea):
         self._entries: List[GraphNode] = []
         self._row_index: dict = {}  # hexsha -> index de ligne (rapide au dessin)
         self._commit_colors: dict = {}  # hexsha -> couleur de SA branche
+        self._branch_colors: dict = {}  # nom de branche -> couleur (badges)
+        self._head_branch: Optional[str] = None
         self._selected_sha: Optional[str] = None
         self._hovered_sha: Optional[str] = None
         self._colors: dict = {}
@@ -107,7 +109,7 @@ class CommitGraphWidget(QAbstractScrollArea):
         self._assign_colors(layout)
 
         self._colors.clear()
-        palette_colors = current_palette()
+        palette_colors = graph_palette()
         for i in range(max(1, layout.max_columns)):
             self._colors[i] = QColor(palette_colors[i % len(palette_colors)])
 
@@ -123,17 +125,53 @@ class CommitGraphWidget(QAbstractScrollArea):
         """
         if not self._entries:
             self._commit_colors = {}
+            self._branch_colors = {}
+            self._head_branch = None
             return
-        palette = [QColor(h) for h in current_palette()]
+        palette = [QColor(h) for h in graph_palette()]
         commit_by_sha = {e.commit.hexsha: e.commit for e in self._entries}
         tips = [
             e
             for e in self._entries
-            if any(r.kind in ("branch", "head") for r in e.refs)
+            if any(r.kind in ("branch", "head", "remote") for r in e.refs)
         ]
+
+        def tip_name(tip) -> Optional[str]:
+            for r in tip.refs:
+                if r.kind == "branch":
+                    return r.name
+            for r in tip.refs:
+                if r.kind == "head":
+                    return r.name
+            for r in tip.refs:
+                if r.kind == "remote":
+                    return r.name
+            return None
+
+        self._head_branch = next(
+            (r.name for e in self._entries for r in e.refs if r.kind == "head"),
+            None,
+        )
+        names = {
+            r.name
+            for e in tips
+            for r in e.refs
+            if r.kind in ("branch", "remote") and r.name != self._head_branch
+        }
+        branch_colors = branch_color_map(names)
+        self._branch_colors = {
+            name: QColor(color) for name, color in branch_colors.items()
+        }
+        if self._head_branch is not None:
+            self._branch_colors[self._head_branch] = QColor(graph_color("accent"))
+
         colors: dict = {}
-        for i, tip in enumerate(tips):
-            color = palette[i % len(palette)]
+        for tip in tips:
+            name = tip_name(tip)
+            if name == self._head_branch:
+                color = QColor(graph_color("accent"))
+            else:
+                color = self._branch_colors.get(name, palette[0])
             sha = tip.commit.hexsha
             while sha in commit_by_sha and sha not in colors:
                 colors[sha] = color
@@ -176,10 +214,10 @@ class CommitGraphWidget(QAbstractScrollArea):
     def paintEvent(self, event) -> None:  # noqa: N802
         painter = QPainter(self.viewport())
         painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
-        painter.fillRect(self.viewport().rect(), QColor(current_color("bg")))
+        painter.fillRect(self.viewport().rect(), QColor(graph_color("bg")))
 
         if not self._layout or not self._entries:
-            painter.setPen(QColor(current_color("muted")))
+            painter.setPen(QColor(graph_color("muted")))
             painter.drawText(
                 self.viewport().rect(),
                 Qt.AlignmentFlag.AlignCenter,
@@ -246,7 +284,7 @@ class CommitGraphWidget(QAbstractScrollArea):
 
         # Anneau de sélection (or)
         if entry.commit.hexsha == self._selected_sha:
-            painter.setPen(QPen(QColor(current_color("accent")), 2))
+            painter.setPen(QPen(QColor(graph_color("accent")), 2))
             painter.setBrush(Qt.BrushStyle.NoBrush)
             painter.drawEllipse(
                 QRectF(
@@ -287,14 +325,14 @@ class CommitGraphWidget(QAbstractScrollArea):
             font.setBold(True)
         painter.setFont(font)
 
-        painter.setPen(QPen(QColor(current_color("faint"))))
+        painter.setPen(QPen(QColor(graph_color("faint"))))
         painter.drawText(
             QRectF(text_x, y - 14, 420, 14),
             Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop,
             f"{entry.commit.author_name}  ·  {self._format_date(entry.commit)}",
         )
 
-        painter.setPen(QPen(QColor(current_color("fg"))))
+        painter.setPen(QPen(QColor(graph_color("fg"))))
         painter.drawText(
             QRectF(text_x, y + 3, 520, 16),
             Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop,
@@ -305,13 +343,13 @@ class CommitGraphWidget(QAbstractScrollArea):
 
     def _paint_refs(self, painter: QPainter, entry: GraphNode, x0: float, y: float) -> None:
         bg_map = {
-            "head": QColor(current_color("accent")),
+            "head": QColor(graph_color("accent")),
             "branch": QColor("#3f9e63"),
             "tag": QColor("#5c6470"),
             "remote": QColor("#7b61b8"),
         }
         fg_map = {
-            "head": QColor(current_color("accent_fg")),
+            "head": QColor(graph_color("accent_fg")),
             "branch": QColor("#ffffff"),
             "tag": QColor("#ffffff"),
             "remote": QColor("#ffffff"),
@@ -322,8 +360,22 @@ class CommitGraphWidget(QAbstractScrollArea):
         subject_w = painter.fontMetrics().horizontalAdvance(entry.commit.subject or "")
         label_x = x0 + min(subject_w + 60, 560)
         for ref in entry.refs:
-            bg = bg_map.get(ref.kind, QColor("#5c6470"))
-            fg = fg_map.get(ref.kind, QColor("#ffffff"))
+            if ref.kind == "branch":
+                is_active_branch = ref.name == self._head_branch
+                if is_active_branch:
+                    bg = QColor(graph_color("accent"))
+                    fg = QColor(graph_color("accent_fg"))
+                else:
+                    bg = self._branch_colors.get(
+                        ref.name, QColor(graph_color("muted"))
+                    )
+                    fg = QColor("#ffffff")
+            elif ref.kind == "remote":
+                bg = self._branch_colors.get(ref.name, QColor(graph_color("muted")))
+                fg = QColor("#ffffff")
+            else:
+                bg = bg_map.get(ref.kind, QColor("#5c6470"))
+                fg = fg_map.get(ref.kind, QColor("#ffffff"))
             text = "HEAD" if ref.kind == "head" else ref.name
 
             m = painter.fontMetrics()

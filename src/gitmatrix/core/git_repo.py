@@ -219,6 +219,17 @@ class GitRepo:
                     result.append(r)
         return result
 
+    def all_tags(self) -> List[RefInfo]:
+        """Tags (annotés ou légers), déduits de la map de refs."""
+        result: List[RefInfo] = []
+        seen = set()
+        for refs in self.ref_map_by_commit().values():
+            for r in refs:
+                if r.kind == "tag" and r.name not in seen:
+                    seen.add(r.name)
+                    result.append(r)
+        return result
+
     def changes(self) -> List[FileChange]:
         """Liste des changements (staged + unstaged + untracked).
 

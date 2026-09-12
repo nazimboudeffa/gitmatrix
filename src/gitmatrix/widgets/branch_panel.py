@@ -13,10 +13,11 @@ from PySide6.QtWidgets import (
     QWidget,
     QHBoxLayout,
     QLabel,
+    QAbstractItemView,
 )
 
 from gitmatrix.core.git_repo import RefInfo, GitMatrixError
-from gitmatrix.theme import current_color, current_palette
+from gitmatrix.theme import current_color, branch_color_map, graph_color
 
 
 def _dot_icon(color: str, size: int = 8) -> QPixmap:
@@ -31,6 +32,45 @@ def _dot_icon(color: str, size: int = 8) -> QPixmap:
     return pm
 
 
+class _SectionHeader(QWidget):
+    """En-tête cliquable pour masquer / afficher une section."""
+
+    clicked = Signal()
+
+    def __init__(self, name: str, parent=None) -> None:
+        super().__init__(parent)
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+        self.setObjectName("SectionHeader")
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        lay = QHBoxLayout(self)
+        lay.setContentsMargins(12, 6, 14, 6)
+        lay.setSpacing(8)
+        muted = current_color("muted")
+        self._arrow = QLabel("▾")
+        self._arrow.setFixedWidth(8)
+        self._arrow.setStyleSheet(
+            f"color:{muted}; font-size:10px; font-weight:700; background:transparent;"
+        )
+        lay.addWidget(self._arrow)
+        self._label = QLabel(name)
+        f = QFont(self.font())
+        f.setPointSize(10)
+        f.setBold(True)
+        self._label.setFont(f)
+        self._label.setStyleSheet(f"color:{muted}; background:transparent;")
+        lay.addWidget(self._label)
+        lay.addStretch(1)
+
+    def set_state(self, shown: bool) -> None:
+        self._arrow.setText("▾" if shown else "▸")
+
+    def mousePressEvent(self, e) -> None:
+        if e.button() == Qt.MouseButton.LeftButton:
+            self.clicked.emit()
+        super().mousePressEvent(e)
+
+
 class BranchPanel(QListWidget):
     """Liste des branches avec menu contextuel (créer, supprimer, checkout)."""
 
@@ -42,11 +82,46 @@ class BranchPanel(QListWidget):
         self.customContextMenuRequested.connect(self._show_menu)
         self.itemDoubleClicked.connect(self._on_double_click)
         self._repo = None
+        self._sections: dict = {}
+        self._current_section: str = ""
 
     def _on_double_click(self, item) -> None:
         branch = item.data(Qt.ItemDataRole.UserRole)
         if isinstance(branch, RefInfo) and branch.kind == "branch":
             self.branch_checked.emit(branch.name)
+
+    def _toggle_section(self, name: str) -> None:
+        sec = self._sections.get(name)
+        if sec is None:
+            return
+        sec["shown"] = not sec["shown"]
+        sec["header"].set_state(sec["shown"])
+        for row in sec["rows"]:
+            row.setHidden(not sec["shown"])
+        self.scrollToItem(sec["item"], QAbstractItemView.ScrollHint.PositionAtTop)
+
+    def _begin_section(self, name: str) -> None:
+        self._current_section = name
+        item = QListWidgetItem()
+        item.setFlags(Qt.ItemFlag.NoItemFlags)
+        header = _SectionHeader(name)
+        item.setSizeHint(header.sizeHint())
+        self.addItem(item)
+        self.setItemWidget(item, header)
+        header.clicked.connect(lambda n=name: self._toggle_section(n))
+        self._sections[name] = {
+            "header": header,
+            "item": item,
+            "rows": [],
+            "shown": True,
+        }
+        item.setData(Qt.ItemDataRole.UserRole + 1, name)
+
+    def _register_row(self, item) -> None:
+        sec = self._sections.get(self._current_section)
+        item.setData(Qt.ItemDataRole.UserRole + 1, self._current_section)
+        if sec is not None:
+            sec["rows"].append(item)
 
     def set_repo(self, repo) -> None:
         self._repo = repo
@@ -55,36 +130,50 @@ class BranchPanel(QListWidget):
         self.clear()
         if self._repo is None:
             return
+        secondary = current_color("muted")
+        self._begin_section("Local branches")
         active = self._repo.active_branch
-        palette_colors = current_palette()
-        for i, b in enumerate(self._repo.all_branches()):
+        br_list = self._repo.all_branches()
+        remotes = sorted(self._repo.all_remote_branches(), key=lambda x: x.name)
+        color_map = branch_color_map(
+            [b.name for b in br_list if b.name != active]
+            + [r.name for r in remotes]
+        )
+        for b in br_list:
             is_active = b.name == active
             dot = (
-                current_color("accent")
+                graph_color("accent")
                 if is_active
-                else palette_colors[i % len(palette_colors)]
+                else color_map.get(b.name, secondary)
             )
             self._add_branch(b, dot, is_active)
 
         # Remote branches (display only, not editable)
-        remotes = self._repo.all_remote_branches()
-        if remotes:
-            remote_color = current_color("muted")
-            sep = QListWidgetItem("Remotes")
-            sep.setFlags(Qt.ItemFlag.NoItemFlags)
-            sep.setForeground(QColor(remote_color))
-            f = QFont(self.font())
-            f.setPointSize(9)
-            f.setBold(True)
-            sep.setFont(f)
-            self.addItem(sep)
-            for r in sorted(remotes, key=lambda x: x.name):
-                item = QListWidgetItem()
-                item.setData(Qt.ItemDataRole.UserRole, r)
-                row = self._row_widget(r.name, remote_color, False, None)
-                item.setSizeHint(row.sizeHint())
-                self.addItem(item)
-                self.setItemWidget(item, row)
+        self._add_display_section(
+            "Remotes",
+            remotes,
+            lambda name: color_map.get(name, secondary),
+        )
+        # Tags (display only, not editable)
+        self._add_display_section(
+            "Tags",
+            sorted(self._repo.all_tags(), key=lambda x: x.name),
+            secondary,
+        )
+
+    def _add_display_section(self, title: str, refs, color) -> None:
+        if not refs:
+            return
+        self._begin_section(title)
+        for r in refs:
+            item = QListWidgetItem()
+            item.setData(Qt.ItemDataRole.UserRole, r)
+            dot = color(r.name) if callable(color) else color
+            row = self._row_widget(r.name, dot, False, None)
+            item.setSizeHint(row.sizeHint())
+            self.addItem(item)
+            self.setItemWidget(item, row)
+            self._register_row(item)
 
     def _add_branch(self, b: RefInfo, dot: str, is_active: bool) -> None:
         item = QListWidgetItem()
@@ -99,12 +188,13 @@ class BranchPanel(QListWidget):
         item.setSizeHint(row.sizeHint())
         self.addItem(item)
         self.setItemWidget(item, row)
+        self._register_row(item)
 
     @staticmethod
     def _row_widget(name: str, dot: str, active: bool, status):
         w = QWidget()
         lay = QHBoxLayout(w)
-        lay.setContentsMargins(12, 4, 14, 4)
+        lay.setContentsMargins(12, 6, 14, 6)
         lay.setSpacing(8)
 
         dot_lbl = QLabel()
@@ -115,7 +205,7 @@ class BranchPanel(QListWidget):
         name_lbl = QLabel(name)
         if active:
             name_lbl.setStyleSheet(
-                f"color:{current_color('accent')}; font-weight:600; background:transparent;"
+                f"color:{graph_color('accent')}; font-weight:600; background:transparent;"
             )
         lay.addWidget(name_lbl)
 
@@ -140,7 +230,11 @@ class BranchPanel(QListWidget):
     def _show_menu(self, pos) -> None:
         item = self.itemAt(pos)
         menu = QMenu(self)
-        menu.addAction("New branch…", self._new_branch)
+        section = None
+        if item is not None:
+            section = item.data(Qt.ItemDataRole.UserRole + 1)
+        if section == "Local branches":
+            menu.addAction("New branch…", self._new_branch)
         if item is not None:
             branch = item.data(Qt.ItemDataRole.UserRole)
             if isinstance(branch, RefInfo) and branch.kind == "branch":
@@ -148,7 +242,8 @@ class BranchPanel(QListWidget):
                     "Switch (checkout)", lambda: self.branch_checked.emit(branch.name)
                 )
                 menu.addAction("Delete", lambda: self._delete_branch(branch.name))
-        menu.exec(self.mapToGlobal(pos))
+        if menu.actions():
+            menu.exec(self.mapToGlobal(pos))
 
     def _new_branch(self) -> None:
         if self._repo is None:

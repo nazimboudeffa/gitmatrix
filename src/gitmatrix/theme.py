@@ -18,7 +18,7 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, Iterable, List, Optional
 
 # Compatibilité QSettings : organisation définie dans app.py.
 from PySide6.QtCore import QSettings
@@ -240,7 +240,20 @@ QTreeWidget, QListWidget, QPlainTextEdit {
 QTreeWidget::item, QListWidget::item {
     border-radius: 3px;
 }
+QListWidget::item {
+    padding: 3px 4px;
+}
 QTreeWidget::item:hover, QListWidget::item:hover {
+    background-color: {surface_pressed};
+}
+
+/* En-têtes de section repliables (panneau de gauche) */
+QWidget#SectionHeader {
+    background-color: transparent;
+    border: none;
+    border-radius: 3px;
+}
+QWidget#SectionHeader:hover {
     background-color: {surface_pressed};
 }
 
@@ -486,13 +499,13 @@ QLabel#HeaderCount {
 /* En-tête de section (Staged / Unstaged) */
 QLabel#GroupHeader {
     font-family: "Cascadia Mono", "JetBrains Mono", "Consolas", monospace;
-    font-size: 10px;
-    font-weight: 600;
-    letter-spacing: 0.08em;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
     color: {muted};
     background-color: transparent;
     border: none;
-    padding: 2px 0 0;
+    padding: 4px 0 0;
 }
 
 /* Status bar : texte principal */
@@ -576,6 +589,28 @@ def current_qss() -> str:
 def current_palette() -> List[str]:
     theme = current_theme()
     return theme.palette if theme.palette else DEFAULT_PALETTE
+
+
+def branch_color_map(names: Iterable[str]) -> dict:
+    """Couleur de la palette par nom de branche (ordre trié, stable).
+
+    Partagée par le graphe et le panneau des branches pour que la couleur
+    d'une branche soit la même aux deux endroits. Utilise la palette du
+    graphe (constante), indépendante du thème d'interface.
+    """
+    palette = graph_palette()
+    ordered = sorted(names)
+    return {name: palette[i % len(palette)] for i, name in enumerate(ordered)}
+
+
+def graph_palette() -> List[str]:
+    """Palette des branches du graphe (toujours la palette standard)."""
+    return DEFAULT_PALETTE
+
+
+def graph_color(token: str) -> str:
+    """Couleur de dessin du graphe (standard, indépendante du thème d'interface)."""
+    return DEFAULT_TOKENS[token]
 
 
 def current_color(token: str) -> str:

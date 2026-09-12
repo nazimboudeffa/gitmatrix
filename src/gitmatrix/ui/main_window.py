@@ -65,7 +65,7 @@ class MainWindow(QMainWindow):
 
         # Splitter principal : branches | graphe | fichiers
         main_split = QSplitter(Qt.Orientation.Horizontal)
-        main_split.addWidget(self._titled("Branches", self.branches))
+        main_split.addWidget(self._wrap_panel(self.branches))
         main_split.addWidget(self.commit_graph)
         main_split.addWidget(right_side)
         main_split.setStretchFactor(0, 0)
@@ -275,14 +275,11 @@ class MainWindow(QMainWindow):
     # ------------------------------------------------------------------
     # Constructeurs de panneaux
     # ------------------------------------------------------------------
-    def _titled(self, title: str, widget: QWidget) -> QWidget:
+    def _wrap_panel(self, widget: QWidget) -> QWidget:
         container = QWidget()
         layout = QVBoxLayout(container)
         layout.setContentsMargins(6, 6, 6, 6)
-        layout.setSpacing(4)
-        label = QLabel(title)
-        label.setObjectName("PanelTitle")
-        layout.addWidget(label)
+        layout.setSpacing(0)
         layout.addWidget(widget, 1)
         return container
 
